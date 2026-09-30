@@ -1,0 +1,184 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Brand palette: Đất nung & kem (terracotta & cream) ── */
+    --brand: 14 47% 41%;         /* #9a4f38 — terracotta, primary */
+    --brand-light: 15 41% 49%;   /* #b0634a — hover */
+    --deep: 12 32% 18%;          /* #3e2620 — espresso, dark sections */
+    --deep-footer: 12 31% 16%;   /* #35211c — footer */
+    --cream: 34 50% 95%;         /* #f8f2ea — page bg */
+    --cream-soft: 33 100% 98%;   /* #fffbf6 — header bg */
+    --cream-strong: 31 68% 89%;  /* #f6e3cf — cream button on dark */
+    --gold: 34 45% 58%;          /* #c49a62 — accent */
+    --gold-light: 36 51% 72%;    /* #dcbf93 */
+    --ink: 0 0% 8%;              /* #141414 — true deep black */
+    --muted-ink: 0 0% 25%;       /* #404040 — dark crisp text */
+
+    /* ── Semantic tokens ── */
+    --background: 34 50% 95%;
+    --foreground: 0 0% 8%;       /* #141414 — true deep black */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+    --primary: 14 47% 41%;
+    --primary-foreground: 34 50% 97%;
+    --secondary: 34 50% 91%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 34 40% 92%;
+    --muted-foreground: 0 0% 25%; /* #404040 — dark readable gray */
+    --accent: 34 45% 58%;
+    --accent-foreground: 15 30% 12%;
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 34 50% 97%;
+    /* Status colours tuned to sit with the earthy palette and stay distinct from terracotta */
+    --success: 95 32% 32%;       /* olive green */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 90% 31%;       /* amber (not orange, so it never looks like the brand); 5.2:1 on white */
+    --warning-foreground: 0 0% 100%;
+    --info: 205 42% 40%;         /* slate blue */
+    --info-foreground: 0 0% 100%;
+    --border: 34 35% 86%;
+    --input: 34 35% 86%;
+    --ring: 14 47% 41%;
+    --radius: 0.5rem;
+
+    /* ── Chart colors ── */
+    --chart-1: 14 47% 41%;
+    --chart-2: 34 45% 58%;
+    --chart-3: 205 42% 45%;
+    --chart-4: 280 30% 50%;
+    --chart-5: 95 32% 38%;
+  }
+
+  .dark {
+    --background: 15 25% 8%;
+    --foreground: 34 35% 92%;
+    --card: 15 22% 12%;
+    --card-foreground: 34 35% 92%;
+    --popover: 15 22% 12%;
+    --popover-foreground: 34 35% 92%;
+    --primary: 15 55% 58%;
+    --primary-foreground: 15 25% 8%;
+    --secondary: 15 15% 18%;
+    --secondary-foreground: 34 35% 92%;
+    --muted: 15 15% 16%;
+    --muted-foreground: 30 12% 62%;
+    --accent: 34 50% 60%;
+    --accent-foreground: 15 25% 8%;
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 34 35% 92%;
+    --success: 95 30% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 40 80% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 205 45% 55%;
+    --info-foreground: 0 0% 100%;
+    --border: 15 15% 22%;
+    --input: 15 15% 22%;
+    --ring: 15 55% 58%;
+    --chart-1: 15 55% 58%;
+    --chart-2: 34 50% 60%;
+    --chart-3: 205 45% 55%;
+    --chart-4: 280 30% 60%;
+    --chart-5: 95 30% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: var(--font-quicksand), 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  input,
+  button,
+  textarea,
+  select,
+  optgroup {
+    font-family: var(--font-quicksand), 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+@layer components {
+  .font-body {
+    font-family: var(--font-quicksand), Quicksand, sans-serif;
+    font-weight: 500;
+  }
+  .eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.18em] text-[hsl(var(--gold))];
+  }
+  .section-heading {
+    @apply text-3xl lg:text-5xl font-bold leading-[1.65] tracking-normal text-foreground;
+  }
+  /* Same look as <Button size="lg"> — for plain <a>/<Link> elements */
+  .btn-primary {
+    @apply inline-flex h-12 items-center justify-center gap-2 rounded-md bg-primary px-6 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[hsl(var(--brand-light))];
+  }
+  .btn-outline {
+    @apply inline-flex h-12 items-center justify-center gap-2 rounded-md border border-primary/30 bg-transparent px-6 text-sm font-semibold text-primary transition-colors hover:bg-secondary;
+  }
+  .btn-cream {
+    @apply inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[hsl(var(--cream-strong))] px-6 text-sm font-semibold text-primary transition-colors hover:bg-white;
+  }
+  .block-title {
+    @apply text-xl font-bold text-foreground;
+  }
+  .page-title {
+    @apply text-3xl font-bold tracking-normal text-foreground;
+  }
+  .card-base {
+    @apply rounded-2xl border border-border bg-card shadow-sm;
+  }
+  .card-hover {
+    @apply transition-all hover:shadow-md hover:-translate-y-0.5;
+  }
+  .input-base {
+    @apply w-full rounded-md border border-input bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.25s ease-out;
+}
