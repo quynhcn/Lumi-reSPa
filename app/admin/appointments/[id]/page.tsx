@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { AlertTriangle, ArrowLeft, BellRing, Calendar, CalendarClock, Clock, Gift, History, Mail, MessageCircle, Phone, Sparkles, StickyNote, User, UserCircle, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -27,8 +27,8 @@ import { RescheduleDialog } from '@/components/reschedule-dialog';
 
 type Detail = AppointmentWithDetails & { customers: AppointmentWithDetails['customers'] & { id?: string } };
 
-export default function AppointmentDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function AppointmentDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [appointment, setAppointment] = useState<Detail | null>(null);
   const [logs, setLogs] = useState<AppointmentLog[]>([]);
@@ -64,7 +64,7 @@ export default function AppointmentDetailPage({ params }: { params: { id: string
   }, [load]);
 
   const updateStatus = async (next: AppointmentStatus) => {
-    const { error } = await supabase.from('appointments').update({ status: next }).eq('id', id);
+    const { error } = await supabase.rpc('transition_appointment', { p_id: id, p_status: next });
     if (error) {
       toast.error('Không thể cập nhật trạng thái');
       return;

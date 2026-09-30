@@ -138,7 +138,7 @@ test('khách vãng lai: đọc được danh mục, không đọc được dữ 
   assert.equal((await anon.select('services', { filters: [{ column: 'is_active', op: 'eq', value: true }] })).body.data.length, 2);
   const st = await anon.select('staff');
   assert.ok(st.body.data.every((x) => !('phone' in x) && !('email' in x)), 'staff.phone/email bị ẩn');
-  for (const t of ['customers', 'appointments', 'profiles', 'leads', 'gift_cards', 'slot_holds', 'pg_user']) {
+  for (const t of ['customers', 'appointments', 'profiles', 'leads', 'gift_cards', 'staff_schedules', 'staff_time_off', 'slot_holds', 'pg_user']) {
     const r = await anon.select(t);
     assert.equal(r.status, 403, t);
   }
@@ -239,6 +239,8 @@ test('khách sửa được hồ sơ của mình, không sửa được hồ sơ
   assert.equal(check.rows[0].name, 'Lê Thị Bình');
   r = await cust.write('customers', 'update', { values: { user_id: null }, filters: [{ column: 'id', op: 'eq', value: mine.id }] });
   assert.equal(r.status, 403);
+  r = await cust.write('customers', 'update', { values: { phone: '0909999999' }, filters: [{ column: 'id', op: 'eq', value: mine.id }] });
+  assert.equal(r.status, 403, 'đổi số điện thoại định danh cần luồng xác minh riêng');
 });
 
 test('KTV: chỉ thấy lịch của mình, chỉ đổi được trạng thái', async () => {
@@ -247,9 +249,14 @@ test('KTV: chỉ thấy lịch của mình, chỉ đổi được trạng thái'
   assert.equal(list.body.data[0].customers.phone, '0987654321');
   let r = await staff.write('appointments', 'update', { values: { price: 1 }, filters: [{ column: 'id', op: 'eq', value: state.apt1Id }] });
   assert.equal(r.status, 403);
-  r = await staff.write('appointments', 'update', { values: { status: 'checked_in' }, filters: [{ column: 'id', op: 'eq', value: state.apt1Id }], returning: true, select: 'id, status', single: 'single' });
+  r = await staff.write('appointments', 'update', { values: { status: 'checked_in' }, filters: [{ column: 'id', op: 'eq', value: state.apt1Id }] });
+  assert.equal(r.status, 403, 'trạng thái chỉ được đổi qua RPC nghiệp vụ');
+  assert.equal(list.body.data[0].price, undefined, 'KTV không được đọc dữ liệu tài chính');
+  r = await staff.rpc('transition_appointment', { p_id: state.apt1Id, p_status: 'checked_in' });
   assert.equal(r.status, 200);
-  assert.equal(r.body.data.status, 'checked_in');
+  assert.equal(r.body.data[0].status, 'checked_in');
+  const invalid = await staff.rpc('transition_appointment', { p_id: state.apt1Id, p_status: 'completed' });
+  assert.equal(invalid.status, 400, 'không được bỏ qua trạng thái in_service');
   const logs = await admin.select('appointment_logs', { filters: [{ column: 'appointment_id', op: 'eq', value: state.apt1Id }] });
   assert.equal(logs.body.data[0].changed_by, 'lan@test.vn', 'log ghi đúng người thao tác qua auth.uid()');
 });
@@ -275,7 +282,7 @@ test('đổi giờ (khách) và huỷ lịch (khách)', async () => {
 // ── Admin ───────────────────────────────────────────────────────────────
 test('admin: hoàn thành lịch → phát voucher, link đánh giá không cần đăng nhập', async () => {
   for (const s of ['in_service', 'completed']) {
-    const r = await admin.write('appointments', 'update', { values: { status: s }, filters: [{ column: 'id', op: 'eq', value: state.apt1Id }] });
+    const r = await admin.rpc('transition_appointment', { p_id: state.apt1Id, p_status: s });
     assert.equal(r.status, 200);
   }
   const token = await admin.rpc('review_request_token', { p_appointment_id: state.apt1Id });
@@ -324,6 +331,8 @@ test('cài đặt ưu đãi: chỉ admin lưu được, lưu thật vào DB, ch�
 });
 
 test('nhắc lịch: chỉ admin/cron; gửi xong mới đánh dấu reminded_at', async () => {
+  const get = await anon.req('/api/reminders/send?hours=48', null, { method: 'GET' });
+  assert.equal(get.status, 405, 'endpoint có side effect không chấp nhận GET');
   let r = await anon.req('/api/reminders/send?hours=48', {});
   assert.equal(r.status, 403);
   // lịch còn mở duy nhất của khách 2 đã huỷ; tạo thêm 1 lịch để nhắc

@@ -56,12 +56,32 @@ const STAFF_PUBLIC_COLUMNS = [
   'id', 'name', 'avatar_url', 'role', 'is_active', 'bio', 'specialties', 'years_experience', 'created_at', 'updated_at',
 ];
 
+const STAFF_APPOINTMENT_COLUMNS = [
+  'id', 'booking_code', 'customer_id', 'staff_id', 'service_id', 'start_time', 'end_time',
+  'status', 'duration_min', 'notes', 'source', 'reminded_at', 'created_at', 'updated_at',
+];
+
 export const TABLE_POLICIES: Record<string, TablePolicy> = {
   services: catalog,
   staff_services: catalog,
-  staff_schedules: catalog,
-  staff_time_off: catalog,
   service_packages: catalog,
+
+  staff_schedules: {
+    select: (a) => {
+      if (isAdmin(a)) return { columns: '*' };
+      if (a.role !== 'staff' || !a.staffId) return null;
+      return { columns: '*', where: (t, bind) => `${t}.staff_id = ${bind(a.staffId)}` };
+    },
+    insert: adminOnly,
+    update: adminOnly,
+    delete: adminOnly,
+  },
+  staff_time_off: {
+    select: adminRead,
+    insert: adminOnly,
+    update: adminOnly,
+    delete: adminOnly,
+  },
 
   staff: {
     select: (a) => (isAdmin(a) ? { columns: '*' } : { columns: STAFF_PUBLIC_COLUMNS }),
@@ -92,7 +112,8 @@ export const TABLE_POLICIES: Record<string, TablePolicy> = {
     update: (a) => {
       if (isAdmin(a)) return { columns: '*' };
       if (!a.userId) return null;
-      return { columns: ['name', 'phone', 'email', 'notes'], where: (t, bind) => `${t}.user_id = ${bind(a.userId)}` };
+      // Phone is an identity key used for history, discounts and vouchers; changing it requires a verified flow.
+      return { columns: ['name', 'email', 'notes'], where: (t, bind) => `${t}.user_id = ${bind(a.userId)}` };
     },
     insert: adminOnly,
     delete: adminOnly,
@@ -103,20 +124,14 @@ export const TABLE_POLICIES: Record<string, TablePolicy> = {
       if (isAdmin(a)) return { columns: '*' };
       if (a.role === 'staff') {
         if (!a.staffId) return null;
-        return { columns: '*', where: (t, bind) => `${t}.staff_id = ${bind(a.staffId)}` };
+        return { columns: STAFF_APPOINTMENT_COLUMNS, where: (t, bind) => `${t}.staff_id = ${bind(a.staffId)}` };
       }
       if (!a.userId) return null;
       return { columns: '*', where: ownCustomer(a) };
     },
     update: (a) => {
-      if (isAdmin(a)) {
-        return {
-          columns: ['status', 'notes', 'reminded_at'],
-        };
-      }
-      if (a.role === 'staff' && a.staffId) {
-        return { columns: ['status'], where: (t, bind) => `${t}.staff_id = ${bind(a.staffId)}` };
-      }
+      // Status changes must go through transition_appointment so the state machine is enforced in PostgreSQL.
+      if (isAdmin(a)) return { columns: ['notes', 'reminded_at'] };
       return null;
     },
     // Tạo lịch chỉ qua RPC book_appointment (giá, ưu đãi, chống trùng tính trong DB)
@@ -209,6 +224,7 @@ export const RPC_POLICIES: Record<string, RpcPolicy> = {
   cancel_my_appointment: { auth: 'user', params: ['p_id'], returns: 'void' },
   submit_review: { auth: 'user', params: ['p_appointment_id', 'p_rating', 'p_comment'], returns: 'void' },
   reschedule_appointment: { auth: 'user', params: ['p_id', 'p_date', 'p_time', 'p_staff_id'], returns: 'table' },
+  transition_appointment: { auth: 'user', params: ['p_id', 'p_status'], returns: 'table' },
   review_request_token: { auth: 'user', params: ['p_appointment_id'], returns: 'scalar' },
   my_vouchers: { auth: 'user', params: [], returns: 'table' },
 };

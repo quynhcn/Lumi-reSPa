@@ -8,7 +8,6 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { SITE } from '@/lib/site-config';
 import { track } from '@/lib/analytics';
-import { isValidPhone } from '@/lib/utils';
 import { OPEN_STATUSES, voucherLabel, type AppointmentWithDetails, type Customer, type Voucher } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,14 +86,13 @@ function AccountContent() {
 
   const handleSave = async () => {
     if (!customer) return;
-    if (!form.name.trim() || !isValidPhone(form.phone)) {
-      toast.error('Vui lòng nhập họ tên và số điện thoại hợp lệ');
+    if (!form.name.trim()) {
+      toast.error('Vui lòng nhập họ tên');
       return;
     }
     setSaving(true);
     const patch = {
       name: form.name.trim(),
-      phone: form.phone.trim(),
       email: form.email.trim() || null,
       notes: form.notes.trim() || null,
     };
@@ -216,7 +214,8 @@ function AccountContent() {
               </div>
               <div>
                 <Label htmlFor="p-phone">Số điện thoại</Label>
-                <Input id="p-phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                <Input id="p-phone" type="tel" value={form.phone} disabled aria-describedby="p-phone-help" />
+                <p id="p-phone-help" className="mt-1 text-xs text-muted-foreground">Số điện thoại định danh chỉ được đổi sau khi xác minh với spa.</p>
               </div>
               <div>
                 <Label htmlFor="p-email">Email</Label>

@@ -1,5 +1,5 @@
 [build]
-command = "npx next build"
+command = "npm run check:deploy && npm run db:migrate && npm run build"
 publish = ".next"
 
 [[plugins]]

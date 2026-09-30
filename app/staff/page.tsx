@@ -2,16 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Phone, Scissors, Wallet } from 'lucide-react';
+import { Calendar, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, Phone, Scissors } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { addDays, dayRangeISO, parseDateKey, toDateKey } from '@/lib/date';
 import {
   DAY_NAMES_FULL,
-  expectedRevenue,
-  formatPrice,
-  realizedRevenue,
   STATUS_LABELS,
   type AppointmentStatus,
   type AppointmentWithDetails,
@@ -80,7 +77,7 @@ function StaffContent() {
   }, [staffProfile, selectedDate, loadAppointments]);
 
   const updateStatus = async (aptId: string, next: AppointmentStatus) => {
-    const { error } = await supabase.from('appointments').update({ status: next }).eq('id', aptId);
+    const { error } = await supabase.rpc('transition_appointment', { p_id: aptId, p_status: next });
     if (error) {
       toast.error('Không thể cập nhật trạng thái');
       return;
@@ -156,16 +153,9 @@ function StaffContent() {
           </Button>
         </section>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <StatCard icon={Calendar} label="Lịch hẹn" value={active.length} />
           <StatCard icon={CheckCircle2} label="Hoàn thành" value={appointments.filter((a) => a.status === 'completed').length} />
-          <StatCard
-            className="col-span-2 sm:col-span-1"
-            icon={Wallet}
-            label="Đã thu"
-            value={formatPrice(realizedRevenue(appointments))}
-            hint={`Dự kiến cả ngày: ${formatPrice(expectedRevenue(appointments))}`}
-          />
         </div>
 
         {/* Appointments */}
@@ -184,7 +174,6 @@ function StaffContent() {
                   startTime={apt.start_time}
                   durationMin={apt.duration_min}
                   status={apt.status}
-                  price={apt.price - (apt.gift_amount ?? 0)} /* amount to collect at the counter */
                   title={apt.services?.name || 'Dịch vụ'}
                   meta={apt.customers?.name}
                 >

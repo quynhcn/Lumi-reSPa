@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
   formatPrice,
@@ -29,8 +29,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
-export default function CustomerDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function CustomerDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [appointments, setAppointments] = useState<AppointmentWithDetails[]>([]);

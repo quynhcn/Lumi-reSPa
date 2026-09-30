@@ -8,7 +8,6 @@ import { Pool, type PoolClient } from 'pg';
  * DATABASE_SSL_REJECT_UNAUTHORIZED=false → chấp nhận chứng chỉ tự ký (chỉ khi nhà cung cấp dùng CA riêng)
  */
 declare global {
-  // eslint-disable-next-line no-var
   var __spaflowPool: Pool | undefined;
 }
 
@@ -18,7 +17,7 @@ export function getPool(): Pool {
     if (!url) throw new Error('Missing DATABASE_URL (see .env.example)');
     global.__spaflowPool = new Pool({
       connectionString: url,
-      max: Number(process.env.DATABASE_POOL_MAX || 10),
+      max: Number(process.env.DATABASE_POOL_MAX || 5),
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
       ssl:

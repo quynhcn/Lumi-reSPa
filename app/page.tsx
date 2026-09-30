@@ -71,7 +71,8 @@ async function getData() {
     supabase.rpc('get_public_reviews', { p_limit: 6 }).then((r) => r.data || [], () => []),
     supabase.rpc('get_review_summary').then((r) => r.data || [], () => []),
   ]);
-  const s = (settings as AppSettings | null) ?? { first_visit_enabled: true, first_visit_discount_pct: 10 };
+  // Fail closed: never advertise a discount when settings could not be read.
+  const s = (settings as AppSettings | null) ?? { first_visit_enabled: false, first_visit_discount_pct: 0 };
   const sum = (summary as { average: number | null; total: number }[] | null)?.[0];
   return {
     services: (svc || []) as Service[],

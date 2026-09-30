@@ -34,7 +34,7 @@ export default function RevenueChart({ data }: { data: RevenuePoint[] }) {
             borderRadius: '8px',
             fontSize: '12px',
           }}
-          formatter={(value: number, name: string) => [formatPrice(value), LABELS[name] ?? name]}
+          formatter={(value, name) => [formatPrice(Number(value ?? 0)), LABELS[String(name)] ?? String(name)]}
         />
         <Bar dataKey="realized" stackId="r" fill="hsl(var(--primary))" />
         <Bar dataKey="open" stackId="r" fill="hsl(var(--primary) / 0.25)" radius={[6, 6, 0, 0]} />

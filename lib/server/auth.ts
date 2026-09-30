@@ -32,14 +32,17 @@ export function clientIp(req: NextRequest): string {
     const real = req.headers.get('x-real-ip');
     if (real) return real.trim();
   }
-  return req.ip || 'unknown';
+  return (req as NextRequest & { ip?: string }).ip || 'unknown';
 }
 
 /** Chặn CSRF: request ghi dữ liệu phải đến từ chính site này. */
 export function sameOrigin(req: NextRequest): boolean {
   if (req.method === 'GET' || req.method === 'HEAD') return true;
   const origin = req.headers.get('origin');
-  if (!origin) return true; // request server-to-server / curl (cookie SameSite=Lax đã chặn phần lớn tình huống)
+  if (!origin) {
+    const fetchSite = req.headers.get('sec-fetch-site');
+    return !fetchSite || fetchSite === 'same-origin' || fetchSite === 'none';
+  }
   const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
   try {
     const o = new URL(origin);

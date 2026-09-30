@@ -8,7 +8,7 @@ interface AppointmentRowProps {
   startTime: string;
   durationMin: number;
   status: AppointmentStatus;
-  price: number;
+  price?: number;
   title: string;
   /** Secondary line, e.g. "Khách A · 0901… · Lan" */
   meta?: string;
@@ -48,13 +48,13 @@ export function AppointmentRow({
         {meta && <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground sm:truncate">{meta}</p>}
         <div className="mt-2 flex items-center justify-between gap-2 sm:hidden">
           <StatusBadge status={status} />
-          <span className="text-sm font-semibold text-primary">{formatPrice(price)}</span>
+          {price !== undefined && <span className="text-sm font-semibold text-primary">{formatPrice(price)}</span>}
         </div>
         {children}
       </div>
       <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">
         <StatusBadge status={status} />
-        <span className="text-sm font-semibold text-primary">{formatPrice(price)}</span>
+        {price !== undefined && <span className="text-sm font-semibold text-primary">{formatPrice(price)}</span>}
       </div>
       {href && <ChevronRight className="hidden h-4 w-4 shrink-0 self-center text-muted-foreground sm:block" aria-hidden />}
     </>

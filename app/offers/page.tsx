@@ -41,7 +41,7 @@ const PROMOTIONS = [
     discount: 'GIẢM 10%',
     subtitle: 'Áp dụng cho mọi liệu trình đơn lẻ hoặc combo tại Lumière Spa',
     desc: 'Lần đầu ghé thăm Lumière Spa, bạn được giảm trực tiếp 10% trên hóa đơn dịch vụ bất kỳ cùng một set trà thảo mộc & ngâm chân muối khoáng chào đón hoàn toàn miễn phí.',
-    code: 'LUMIERE10',
+    code: null as string | null,
     validUntil: 'Áp dụng đến hết tháng này',
     image: '/offer-first-visit.jpg',
     highlights: [
@@ -51,7 +51,7 @@ const PROMOTIONS = [
       'Không phụ thu cuối tuần hay ngày lễ',
     ],
     ctaText: 'Đặt lịch nhận ưu đãi ngay',
-    href: '/booking?promo=LUMIERE10',
+    href: '/booking',
   },
   {
     id: 'vip-member',
@@ -60,7 +60,7 @@ const PROMOTIONS = [
     discount: 'TIẾT KIỆM 25%',
     subtitle: 'Gói 10 buổi trị liệu chuyên sâu không giới hạn thời gian sử dụng',
     desc: 'Thiết kế riêng cho khách hàng duy trì thói quen chăm sóc sức khỏe và làn da định kỳ. Tiết kiệm chi phí vượt trội và nhận nhiều đặc quyền phòng VIP độc quyền.',
-    code: 'VIPCARE25',
+    code: null,
     validUntil: 'Số lượng phát hành có hạn',
     image: '/offer-member-card.jpg',
     highlights: [
@@ -79,7 +79,7 @@ const PROMOTIONS = [
     discount: 'TẶNG THIỆP & HỘP',
     subtitle: 'Trao gửi bình yên và sự chăm sóc ân cần đến người bạn yêu thương',
     desc: 'Món quà hoàn hảo dành tặng mẹ, vợ, người yêu, đồng nghiệp hoặc đối tác trong các dịp sinh nhật, kỷ niệm. Hộp quà thắt nơ lụa cao cấp kèm thiệp chúc mừng viết tay theo yêu cầu.',
-    code: 'SPAGIFT',
+    code: null,
     validUntil: 'Thời hạn sử dụng 06 tháng',
     image: '/offer-gift-card.jpg',
     highlights: [
@@ -98,7 +98,7 @@ const PROMOTIONS = [
     discount: 'GIẢM 20%',
     subtitle: 'Không gian riêng tư 90 phút cho 2 người cùng nến thơm và hoa tươi',
     desc: 'Khoảng thời gian tuyệt vời để cùng người thân yêu buông bỏ lo toan, cùng nhau trò chuyện và tái tạo năng lượng với liệu pháp massage body tinh dầu ấm kết hợp gội đầu dưỡng sinh.',
-    code: 'COUPLE20',
+    code: null,
     validUntil: 'Cần đặt trước tối thiểu 2 giờ',
     image: '/about-space-3.jpg',
     highlights: [
@@ -327,7 +327,7 @@ export default function OffersPage() {
                 </ul>
 
                 {/* Coupon Code Strip */}
-                <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-[#FAF5EE] p-3 border border-[#EFE5D8]">
+                {promo.code && <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl bg-[#FAF5EE] p-3 border border-[#EFE5D8]">
                   <div>
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-[#9B3E1F] block">
                       Mã ưu đãi
@@ -340,7 +340,7 @@ export default function OffersPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => copyCode(promo.code)}
+                    onClick={() => copyCode(promo.code!)}
                     className="h-9 gap-1.5 rounded-xl border-[#D8C7B5] bg-white px-3 text-xs font-semibold text-[#8D381B] hover:bg-[#FAF4EC]"
                   >
                     {copiedCode === promo.code ? (
@@ -355,7 +355,7 @@ export default function OffersPage() {
                       </>
                     )}
                   </Button>
-                </div>
+                </div>}
 
                 {/* Footer Action */}
                 <div className="mt-6 pt-4 border-t border-[#F2EAE0] flex items-center justify-between gap-3">

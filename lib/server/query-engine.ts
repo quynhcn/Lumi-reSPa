@@ -213,8 +213,16 @@ async function relationExpr(
 }
 
 function err(e: unknown): DbError {
-  const pe = e as { message?: string; code?: string; detail?: string; hint?: string };
-  return { message: pe.message ?? 'Unknown error', code: pe.code, details: pe.detail ?? null, hint: pe.hint ?? null };
+  const pe = e as { message?: string; code?: string };
+  const message = pe.message || '';
+  const isBusinessError = pe.code === 'P0001' || pe.code === '23514';
+  if (isBusinessError && /^[A-Z][A-Z0-9_:-]*(?:[a-z_]+->?[a-z_]+)?$/.test(message)) {
+    return { message, code: pe.code };
+  }
+  if (pe.code === '23505') return { message: 'DUPLICATE_VALUE', code: pe.code };
+  if (pe.code === '23P01') return { message: 'SLOT_UNAVAILABLE', code: pe.code };
+  console.error('[query-engine]', { code: pe.code, message });
+  return { message: 'Database operation failed', code: pe.code || 'SF500' };
 }
 
 function finish(rows: unknown[], spec: QuerySpec, count: number | null): DbResult {

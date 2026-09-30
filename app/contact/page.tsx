@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowRight,
   BookOpen,
@@ -80,7 +81,7 @@ export default function ContactPage() {
         
         {/* Foreground Botanical branch bottom-left */}
         <div className="absolute bottom-0 left-0 z-20 opacity-90 hidden lg:block pointer-events-none mix-blend-multiply">
-          <img src="/contact/contact-botanical-left.jpg" alt="" className="w-auto h-[240px] opacity-20 grayscale sepia contrast-125" style={{ mixBlendMode: 'multiply' }} />
+          <Image src="/contact/contact-botanical-left.jpg" alt="" width={320} height={240} className="h-[240px] w-auto opacity-20 grayscale sepia contrast-125" style={{ mixBlendMode: 'multiply' }} />
         </div>
 
         <div className="relative z-10 mx-auto max-w-[1240px] px-6">

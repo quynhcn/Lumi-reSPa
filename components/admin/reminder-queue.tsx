@@ -14,8 +14,6 @@ import {
   Clock,
   History,
   Bot,
-  Send,
-  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -54,21 +52,11 @@ function endOfTomorrowVN(now: Date) {
 }
 
 interface ReminderSettings {
-  autoEnabled: boolean;
-  channel: 'zalo_zns' | 'sms' | 'webhook' | 'system';
   hoursAhead: number;
-  brandname: string;
-  apiKey: string;
-  webhookUrl: string;
 }
 
 const DEFAULT_SETTINGS: ReminderSettings = {
-  autoEnabled: false,
-  channel: 'system',
   hoursAhead: 24,
-  brandname: 'LumiereSpa',
-  apiKey: '',
-  webhookUrl: '',
 };
 
 interface SentLog {
@@ -90,7 +78,8 @@ export function ReminderQueue() {
   const [settings, setSettings] = useState<ReminderSettings>(() => {
     try {
       const saved = localStorage.getItem('lumiere_reminder_settings');
-      return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
+      const parsed = saved ? JSON.parse(saved) : {};
+      return { hoursAhead: Number(parsed.hoursAhead) || DEFAULT_SETTINGS.hoursAhead };
     } catch {
       return DEFAULT_SETTINGS;
     }
@@ -143,9 +132,10 @@ export function ReminderQueue() {
   }, [load]);
 
   const saveSettings = (newSettings: ReminderSettings) => {
-    setSettings(newSettings);
+    const safeSettings = { hoursAhead: newSettings.hoursAhead };
+    setSettings(safeSettings);
     try {
-      localStorage.setItem('lumiere_reminder_settings', JSON.stringify(newSettings));
+      localStorage.setItem('lumiere_reminder_settings', JSON.stringify(safeSettings));
     } catch {}
   };
 
@@ -158,24 +148,6 @@ export function ReminderQueue() {
       return updated;
     });
   };
-
-  // Automated background runner: periodically checks if auto-pilot is enabled
-  useEffect(() => {
-    if (!settings.autoEnabled) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/reminders/send?hours=${settings.hoursAhead}`);
-        const data = await res.json();
-        if (data.success && data.count > 0) {
-          toast.success(`Hệ thống tự động: Đã gửi nhắc lịch cho ${data.count} khách hàng!`);
-          load();
-        }
-      } catch {}
-    }, 15 * 60 * 1000); // Check every 15 minutes
-
-    return () => clearInterval(interval);
-  }, [settings.autoEnabled, settings.hoursAhead, load]);
 
   const markDone = async (id: string, apt?: Row) => {
     const timestamp = new Date().toISOString();
@@ -264,20 +236,13 @@ export function ReminderQueue() {
         <div className="flex flex-wrap items-center gap-2">
           {/* Auto-pilot toggle */}
           <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-medium">
-            <Bot className={`h-4 w-4 ${settings.autoEnabled ? 'text-primary animate-pulse' : 'text-muted-foreground'}`} />
-            <span className={settings.autoEnabled ? 'text-foreground font-semibold' : 'text-muted-foreground'}>
-              {settings.autoEnabled ? 'Tự động nhắc: BẬT' : 'Tự động nhắc: TẮT'}
+            <Bot className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">
+              Lịch tự động: cấu hình phía server
             </span>
             <Switch
-              checked={settings.autoEnabled}
-              onCheckedChange={(checked) => {
-                saveSettings({ ...settings, autoEnabled: checked });
-                if (checked) {
-                  toast.success('Đã kích hoạt chế độ tự động nhắc lịch hẹn định kỳ!');
-                } else {
-                  toast.info('Đã tắt chế độ tự động nhắc lịch');
-                }
-              }}
+              checked={false}
+              disabled
               aria-label="Bật chế độ tự động nhắc lịch"
             />
           </div>
@@ -398,8 +363,8 @@ export function ReminderQueue() {
             <div>
               <Label className="font-semibold">Kênh gửi tin tự động</Label>
               <select
-                value={settings.channel}
-                onChange={(e) => setSettings({ ...settings, channel: e.target.value as any })}
+                value="system"
+                disabled
                 className="input-base mt-1"
               >
                 <option value="system">Tự động ghi nhận & Đồng bộ hệ thống (Mặc định)</option>
@@ -426,32 +391,34 @@ export function ReminderQueue() {
             <div>
               <Label className="font-semibold">Tên hiển thị / Brandname</Label>
               <Input
-                value={settings.brandname}
-                onChange={(e) => setSettings({ ...settings, brandname: e.target.value })}
-                placeholder="Lumiere Spa"
+                value="Cấu hình bằng biến môi trường trên server"
+                readOnly
+                disabled
                 className="mt-1"
               />
             </div>
 
-            {settings.channel === 'webhook' && (
+            {false && (
               <div>
                 <Label className="font-semibold">Webhook URL</Label>
                 <Input
-                  value={settings.webhookUrl}
-                  onChange={(e) => setSettings({ ...settings, webhookUrl: e.target.value })}
+                  value=""
+                  readOnly
+                  disabled
                   placeholder="https://hook.eu1.make.com/..."
                   className="mt-1 font-mono text-xs"
                 />
               </div>
             )}
 
-            {(settings.channel === 'sms' || settings.channel === 'zalo_zns') && (
+            {false && (
               <div>
                 <Label className="font-semibold">API Key / Access Token</Label>
                 <Input
                   type="password"
-                  value={settings.apiKey}
-                  onChange={(e) => setSettings({ ...settings, apiKey: e.target.value })}
+                  value=""
+                  readOnly
+                  disabled
                   placeholder="Nhập khóa API của nhà mạng..."
                   className="mt-1 font-mono text-xs"
                 />

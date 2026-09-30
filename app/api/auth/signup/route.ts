@@ -28,15 +28,18 @@ export async function POST(req: NextRequest) {
   }
 
   const hash = await bcrypt.hash(password, 10);
+  const requiresConfirmation = process.env.REQUIRE_EMAIL_CONFIRMATION === 'true';
   try {
     const out = await withContext({ userId: null }, async (c) => {
       const { rows } = await c.query(
         `INSERT INTO auth.users (email, encrypted_password, email_confirmed_at, raw_user_meta_data)
-         VALUES ($1, $2, now(), $3::jsonb) RETURNING id`,
-        [email, hash, JSON.stringify({ name, phone: phoneRaw })]
+         VALUES ($1, $2, CASE WHEN $3::boolean THEN NULL ELSE now() END, $4::jsonb) RETURNING id`,
+        [email, hash, requiresConfirmation, JSON.stringify({ name, phone: phoneRaw })]
       );
+      if (requiresConfirmation) return null;
       return createSession(c, rows[0].id, req);
     });
+    if (!out) return json({ session: null, user: null, confirmation_required: true }, 202);
     const payload = sessionPayload(await getSessionByToken(out.token));
     const res = json({ ...payload, user: payload.session?.user ?? null });
     setSessionCookie(res, out.token, out.expires);

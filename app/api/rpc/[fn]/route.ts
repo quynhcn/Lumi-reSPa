@@ -9,17 +9,18 @@ import { json, readJson } from '@/lib/server/http';
 export const dynamic = 'force-dynamic';
 
 /** Gọi hàm nghiệp vụ trong DB (thay /rest/v1/rpc của Supabase). Danh sách hàm được phép: RPC_POLICIES. */
-export async function POST(req: NextRequest, { params }: { params: { fn: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ fn: string }> }) {
+  const { fn } = await params;
   const args = await readJson<Record<string, unknown>>(req);
   if (args instanceof NextResponse) return args;
   try {
-    const limit = RPC_POLICIES[params.fn]?.rateLimit;
-    if (limit && (await rateLimited(`rpc:${params.fn}:${clientIp(req)}`, limit.max, limit.windowSec))) {
+    const limit = RPC_POLICIES[fn]?.rateLimit;
+    if (limit && (await rateLimited(`rpc:${fn}:${clientIp(req)}`, limit.max, limit.windowSec))) {
       return json({ data: null, error: { message: 'RATE_LIMITED', code: 'P0001' }, count: null, status: 429 }, 429);
     }
     const session = await getSession(req);
     const actor = actorOf(session);
-    const result = await withContext({ userId: actor.userId, ip: clientIp(req) }, (c) => executeRpc(c, actor, params.fn, args || {}));
+    const result = await withContext({ userId: actor.userId, ip: clientIp(req) }, (c) => executeRpc(c, actor, fn, args || {}));
     return json(result, result.error ? result.status : 200);
   } catch (e) {
     console.error('[api/rpc]', e);

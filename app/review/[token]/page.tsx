@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { CheckCircle2, Copy, ExternalLink, Gift, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -26,7 +27,8 @@ type Invite = {
 };
 
 /** Review link sent by Zalo/SMS after a visit — works without signing in (the token is the key). */
-export default function ReviewByLinkPage({ params }: { params: { token: string } }) {
+export default function ReviewByLinkPage() {
+  const { token } = useParams<{ token: string }>();
   const [invite, setInvite] = useState<Invite | null>(null);
   const [loading, setLoading] = useState(true);
   const [rating, setRating] = useState(0);
@@ -35,22 +37,22 @@ export default function ReviewByLinkPage({ params }: { params: { token: string }
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    const valid = /^[0-9a-f-]{36}$/i.test(params.token);
+    const valid = /^[0-9a-f-]{36}$/i.test(token);
     if (!valid) {
       setLoading(false);
       return;
     }
-    supabase.rpc('get_review_invite', { p_token: params.token }).then(({ data }) => {
+    supabase.rpc('get_review_invite', { p_token: token }).then(({ data }) => {
       const row = ((data as Invite[]) || [])[0] ?? null;
       setInvite(row);
       setDone(!!row?.reviewed);
       setLoading(false);
     });
-  }, [params.token]);
+  }, [token]);
 
   const submit = async () => {
     setSending(true);
-    const { error } = await supabase.rpc('submit_review_by_token', { p_token: params.token, p_rating: rating, p_comment: comment });
+    const { error } = await supabase.rpc('submit_review_by_token', { p_token: token, p_rating: rating, p_comment: comment });
     setSending(false);
     if (error && !error.message.includes('ALREADY_REVIEWED')) {
       toast.error(error.message.includes('EXPIRED') ? 'Link đánh giá đã hết hạn.' : 'Không gửi được đánh giá. Vui lòng thử lại.');
