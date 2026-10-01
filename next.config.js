@@ -2,6 +2,7 @@
 const nextConfig = {
   images: { formats: ['image/avif', 'image/webp'] },
   async headers() {
+    const isDev = process.env.NODE_ENV !== 'production';
     return [
       {
         source: '/(.*)',
@@ -13,7 +14,7 @@ const nextConfig = {
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; form-action 'self'; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; connect-src 'self' https:; upgrade-insecure-requests",
+            value: `default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; form-action 'self'; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}; connect-src 'self' https:; upgrade-insecure-requests`,
           },
         ],
       },

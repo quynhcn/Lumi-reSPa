@@ -11,8 +11,7 @@
     "test:api": "node --test --test-concurrency=1 tests/api/api.test.mjs",
     "check:deploy": "node scripts/check-deploy-env.mjs",
     "db:migrate": "node scripts/db-migrate.mjs",
-    "db:status": "node scripts/db-migrate.mjs --status",
-    "db:import-supabase": "node scripts/import-from-supabase.mjs"
+    "db:status": "node scripts/db-migrate.mjs --status"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -32,7 +31,8 @@
     "recharts": "^3.10.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^2.5.2",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@netlify/plugin-nextjs": "5.16.0",

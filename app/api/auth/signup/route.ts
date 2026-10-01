@@ -7,21 +7,31 @@ import { json, readJson } from '@/lib/server/http';
 import { normalizeVnPhone } from '@/lib/server/phone';
 
 export const dynamic = 'force-dynamic';
-const MIN_PASSWORD = 8;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { z } from 'zod';
 
-type Body = { email?: string; password?: string; data?: { name?: string; phone?: string } };
+const signupSchema = z.object({
+  email: z.string().email('Invalid email').max(254),
+  password: z.string().min(8, 'Password should be at least 8 characters').max(72),
+  data: z.object({
+    name: z.string().max(100).optional(),
+    phone: z.string().optional(),
+  }).optional(),
+});
 
 export async function POST(req: NextRequest) {
-  const body = await readJson<Body>(req);
+  const body = await readJson(req);
   if (body instanceof NextResponse) return body;
-  const email = String(body.email || '').trim().toLowerCase();
-  const password = String(body.password || '');
-  const name = String(body.data?.name || '').trim().slice(0, 100);
-  const phoneRaw = String(body.data?.phone || '').trim();
+  
+  const parsed = signupSchema.safeParse(body);
+  if (!parsed.success) {
+    return json({ error: { message: parsed.error.issues[0].message } }, 400);
+  }
 
-  if (!EMAIL.test(email) || email.length > 254) return json({ error: { message: 'Invalid email' } }, 400);
-  if (password.length < MIN_PASSWORD || password.length > 72) return json({ error: { message: 'Password should be at least 8 characters' } }, 400);
+  const email = parsed.data.email.toLowerCase();
+  const password = parsed.data.password;
+  const name = parsed.data.data?.name?.trim() || '';
+  const phoneRaw = parsed.data.data?.phone?.trim() || '';
+
   if (phoneRaw && !normalizeVnPhone(phoneRaw)) return json({ error: { message: 'Invalid phone number' } }, 400);
   if (await rateLimited(`signup:ip:${clientIp(req)}`, 10, 3600)) {
     return json({ error: { message: 'Too many requests, rate limit exceeded' } }, 429);

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertCircle, Check, Pencil, Wand2, X } from 'lucide-react';
-import { parseBookingRequest, type ParsedBooking } from '@/lib/booking-parser';
+import { AlertCircle, Check, Pencil, Wand2, X, Loader2 } from 'lucide-react';
+import type { ParsedBooking } from '@/lib/booking-parser';
 import { parseDateKey } from '@/lib/date';
+import { toast } from 'sonner';
 import { track } from '@/lib/analytics';
 import type { Service } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -27,11 +28,29 @@ export function AiQuickBook({ services, onApply }: AiQuickBookProps) {
   const [input, setInput] = useState('');
   const [parsed, setParsed] = useState<ParsedBooking | null>(null);
 
-  const parse = () => {
+  const [loading, setLoading] = useState(false);
+
+  const parse = async () => {
     if (!input.trim()) return;
-    const p = parseBookingRequest(input.trim(), services);
-    setParsed(p);
-    track('quick_book_parse', { understood: p.understood_fields.length });
+    setLoading(true);
+    try {
+      const res = await fetch('/api/ai/parse-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: input.trim(), services })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Có lỗi khi phân tích bằng AI');
+        return;
+      }
+      setParsed(data);
+      track('quick_book_parse', { understood: data.understood_fields?.length || 0 });
+    } catch (e) {
+      toast.error('Lỗi kết nối AI');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const apply = () => {
@@ -91,9 +110,13 @@ export function AiQuickBook({ services, onApply }: AiQuickBookProps) {
             }
           }}
         />
-        <Button onClick={parse} disabled={!input.trim()} className="self-end">
-          <Wand2 className="h-4 w-4 sm:mr-1.5" />
-          <span className="hidden sm:inline">Phân tích</span>
+        <Button onClick={parse} disabled={!input.trim() || loading} className="self-end">
+          {loading ? (
+            <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
+          ) : (
+            <Wand2 className="h-4 w-4 sm:mr-1.5" />
+          )}
+          <span className="hidden sm:inline">{loading ? 'Đang phân tích...' : 'Phân tích'}</span>
         </Button>
       </div>
 

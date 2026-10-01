@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -33,84 +33,7 @@ import { LeadForm } from '@/components/landing/lead-form';
 import { MobileActionBar } from '@/components/landing/contact-actions';
 import { Button } from '@/components/ui/button';
 
-const PROMOTIONS = [
-  {
-    id: 'first-visit',
-    badge: 'DÀNH CHO KHÁCH HÀNG MỚI',
-    title: 'Ưu Đãi Trải Nghiệm Lần Đầu',
-    discount: 'GIẢM 10%',
-    subtitle: 'Áp dụng cho mọi liệu trình đơn lẻ hoặc combo tại Lumière Spa',
-    desc: 'Lần đầu ghé thăm Lumière Spa, bạn được giảm trực tiếp 10% trên hóa đơn dịch vụ bất kỳ cùng một set trà thảo mộc & ngâm chân muối khoáng chào đón hoàn toàn miễn phí.',
-    code: null as string | null,
-    validUntil: 'Áp dụng đến hết tháng này',
-    image: '/offer-first-visit.jpg',
-    highlights: [
-      'Áp dụng cho tất cả dịch vụ trong thực đơn',
-      'Tặng kèm 15 phút ngâm chân thảo mộc & thưởng trà hoa',
-      'Được chọn kỹ thuật viên theo yêu cầu',
-      'Không phụ thu cuối tuần hay ngày lễ',
-    ],
-    ctaText: 'Đặt lịch nhận ưu đãi ngay',
-    href: '/booking',
-  },
-  {
-    id: 'vip-member',
-    badge: 'GÓI HỘI VIÊN TIẾT KIỆM',
-    title: 'Thẻ Hội Viên VIP Thư Thái',
-    discount: 'TIẾT KIỆM 25%',
-    subtitle: 'Gói 10 buổi trị liệu chuyên sâu không giới hạn thời gian sử dụng',
-    desc: 'Thiết kế riêng cho khách hàng duy trì thói quen chăm sóc sức khỏe và làn da định kỳ. Tiết kiệm chi phí vượt trội và nhận nhiều đặc quyền phòng VIP độc quyền.',
-    code: null,
-    validUntil: 'Số lượng phát hành có hạn',
-    image: '/offer-member-card.jpg',
-    highlights: [
-      'Tiết kiệm đến 25% so với giá dịch vụ lẻ từng buổi',
-      'Đặc quyền sử dụng phòng đôi VIP riêng tư miễn phí',
-      'Tặng 1 chai tinh dầu trị liệu nguyên chất trị giá 450.000 đ',
-      'Có thể chia sẻ số buổi cho người thân hoặc bạn bè',
-    ],
-    ctaText: 'Đăng ký thẻ hội viên',
-    href: '/booking',
-  },
-  {
-    id: 'gift-voucher',
-    badge: 'MÓN QUÀ TINH TẾ',
-    title: 'Thẻ Quà Tặng Thư Giãn (Gift Card)',
-    discount: 'TẶNG THIỆP & HỘP',
-    subtitle: 'Trao gửi bình yên và sự chăm sóc ân cần đến người bạn yêu thương',
-    desc: 'Món quà hoàn hảo dành tặng mẹ, vợ, người yêu, đồng nghiệp hoặc đối tác trong các dịp sinh nhật, kỷ niệm. Hộp quà thắt nơ lụa cao cấp kèm thiệp chúc mừng viết tay theo yêu cầu.',
-    code: null,
-    validUntil: 'Thời hạn sử dụng 06 tháng',
-    image: '/offer-gift-card.jpg',
-    highlights: [
-      'Tùy chọn mệnh giá linh hoạt từ 500.000 đ đến 3.000.000 đ',
-      'Hộp quà giấy mỹ thuật thắt nơ lụa cao cấp miễn phí',
-      'Hỗ trợ gửi thiệp viết tay tận nơi cho người nhận',
-      'Áp dụng cho mọi liệu trình chăm sóc và combo',
-    ],
-    ctaText: 'Tư vấn đặt thẻ quà tặng',
-    href: '#lead-form-section',
-  },
-  {
-    id: 'couple-relax',
-    badge: 'GẮN KẾT YÊU THƯƠNG',
-    title: 'Combo Cặp Đôi & Mẹ Con',
-    discount: 'GIẢM 20%',
-    subtitle: 'Không gian riêng tư 90 phút cho 2 người cùng nến thơm và hoa tươi',
-    desc: 'Khoảng thời gian tuyệt vời để cùng người thân yêu buông bỏ lo toan, cùng nhau trò chuyện và tái tạo năng lượng với liệu pháp massage body tinh dầu ấm kết hợp gội đầu dưỡng sinh.',
-    code: null,
-    validUntil: 'Cần đặt trước tối thiểu 2 giờ',
-    image: '/about-space-3.jpg',
-    highlights: [
-      'Phòng đôi VIP riêng tư, bài trí nến thơm và hoa sứ lãng mạn',
-      'Liệu trình trọn gói 90 phút kết hợp Body & Gội đầu thảo mộc',
-      'Thưởng thức trà dưỡng nhan và bánh sen ấm nóng sau liệu trình',
-      'Giảm 20% tổng hóa đơn khi đặt lịch cùng nhau',
-    ],
-    ctaText: 'Đặt lịch phòng đôi',
-    href: '/booking',
-  },
-];
+
 
 const TRUST_POINTS = [
   {
@@ -141,6 +64,22 @@ const TRUST_POINTS = [
 
 export default function OffersPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [promotions, setPromotions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    import('@/lib/supabase').then(({ supabase }) => {
+      supabase
+        .from('promotions')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order')
+        .then(({ data }) => {
+          if (data) setPromotions(data);
+          setLoading(false);
+        });
+    });
+  }, []);
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -275,7 +214,11 @@ export default function OffersPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-10">
-          {PROMOTIONS.map((promo) => (
+          {loading ? (
+            <div className="col-span-full py-12 flex justify-center">
+              <div className="animate-spin rounded-full border-2 border-[#8D381B] border-t-transparent h-8 w-8" />
+            </div>
+          ) : promotions.map((promo) => (
             <div
               key={promo.id}
               className="group flex flex-col rounded-[28px] bg-white border border-[#EFE5D8] overflow-hidden shadow-[0_8px_30px_rgba(40,20,10,0.04)] hover:shadow-[0_18px_48px_rgba(40,20,10,0.09)] hover:-translate-y-1 transition-all duration-300"
@@ -284,7 +227,7 @@ export default function OffersPage() {
               <div className="relative aspect-[16/9] w-full overflow-hidden bg-[#F5ECE1]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={promo.image}
+                  src={promo.image_url}
                   alt={promo.title}
                   loading="lazy"
                   className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -313,12 +256,12 @@ export default function OffersPage() {
                   {promo.title}
                 </h3>
                 <p className="mt-2.5 text-xs sm:text-[13px] leading-relaxed text-[#6B5E55]">
-                  {promo.desc}
+                  {promo.description}
                 </p>
 
                 {/* Feature Highlights */}
                 <ul className="mt-4 space-y-2 border-t border-[#F2EAE0] pt-4 text-xs sm:text-[13px] text-[#4F3E34]">
-                  {promo.highlights.map((h, idx) => (
+                  {promo.highlights.map((h: string, idx: number) => (
                     <li key={idx} className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-[#8D381B] mt-0.5" />
                       <span>{h}</span>
@@ -359,12 +302,12 @@ export default function OffersPage() {
 
                 {/* Footer Action */}
                 <div className="mt-6 pt-4 border-t border-[#F2EAE0] flex items-center justify-between gap-3">
-                  <span className="text-[11px] text-[#8C7A6D]">{promo.validUntil}</span>
+                  <span className="text-[11px] text-[#8C7A6D]">{promo.valid_until}</span>
                   <Link
                     href={promo.href}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-[#8D381B] px-5 py-2.5 text-xs sm:text-[13px] font-semibold text-white shadow-sm hover:bg-[#722A13] transition-colors"
                   >
-                    <span>{promo.ctaText}</span>
+                    <span>{promo.cta_text}</span>
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>

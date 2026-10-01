@@ -9,11 +9,24 @@ export const dynamic = 'force-dynamic';
 // Hash giả để thời gian phản hồi như nhau dù email có tồn tại hay không
 const DUMMY_HASH = bcrypt.hashSync('spaflow-dummy-password', 10);
 
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
 export async function POST(req: NextRequest) {
-  const body = await readJson<{ email?: string; password?: string }>(req);
+  const body = await readJson(req);
   if (body instanceof NextResponse) return body;
-  const email = String(body.email || '').trim().toLowerCase();
-  const password = String(body.password || '');
+
+  const parsed = loginSchema.safeParse(body);
+  if (!parsed.success) {
+    return json({ error: { message: parsed.error.issues[0].message } }, 400);
+  }
+
+  const email = parsed.data.email.toLowerCase();
+  const password = parsed.data.password;
   const ip = clientIp(req);
 
   if ((await rateLimited(`login:ip:${ip}`, 30, 900)) || (await rateLimited(`login:email:${email}`, 10, 900))) {

@@ -65,6 +65,7 @@ export const TABLE_POLICIES: Record<string, TablePolicy> = {
   services: catalog,
   staff_services: catalog,
   service_packages: catalog,
+  promotions: catalog,
 
   staff_schedules: {
     select: (a) => {

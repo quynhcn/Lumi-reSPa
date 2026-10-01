@@ -57,7 +57,7 @@ type PublicStaff = Pick<Staff, 'id' | 'name' | 'avatar_url' | 'role' | 'bio' | '
 
 async function getData() {
   const supabase = createServerDb();
-  const [svc, settings, staff, packages, reviews, summary] = await Promise.all([
+  const [svc, settings, staff, packages, reviews, summary, customersCount] = await Promise.all([
     supabase.from('services').select('*').eq('is_active', true).order('category').order('price').then((r) => r.data || [], () => []),
     supabase.from('app_settings').select('first_visit_enabled, first_visit_discount_pct').eq('id', 1).maybeSingle().then((r) => r.data, () => null),
     // Only public profile fields — never phone / email
@@ -70,6 +70,7 @@ async function getData() {
     supabase.from('service_packages').select('*, services!inner (name, price, duration_min, is_active)').eq('is_active', true).eq('services.is_active', true).order('price').then((r) => r.data || [], () => []),
     supabase.rpc('get_public_reviews', { p_limit: 6 }).then((r) => r.data || [], () => []),
     supabase.rpc('get_review_summary').then((r) => r.data || [], () => []),
+    supabase.from('customers').select('*', { count: 'exact', head: true }).then((r) => r.count || 0, () => 0),
   ]);
   // Fail closed: never advertise a discount when settings could not be read.
   const s = (settings as AppSettings | null) ?? { first_visit_enabled: false, first_visit_discount_pct: 0 };
@@ -81,6 +82,7 @@ async function getData() {
     packages: (packages || []) as ServicePackage[],
     reviews: (reviews || []) as PublicReview[],
     rating: sum && sum.total > 0 ? { average: Number(sum.average), total: sum.total } : null,
+    customersCount,
   };
 }
 
@@ -97,7 +99,7 @@ function Stars({ value, className }: { value: number; className?: string }) {
 }
 
 export default async function HomePage() {
-  const { services, offerPct, staff, packages, reviews, rating } = await getData();
+  const { services, offerPct, staff, packages, reviews, rating, customersCount } = await getData();
 
   // Local SEO: schema.org DaySpa with address, hours, price list and (real) rating
   const jsonLd = {
@@ -161,7 +163,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-[#EDE5DA]">
             {/* Feature 1: 100% Thảo Mộc Sạch */}
             <div className="flex items-center gap-4 sm:px-4 first:pl-0">
-              <span className="flex h-12 w-12 sm:h-13 sm:w-13 shrink-0 items-center justify-center rounded-full bg-[#F5ECE2] text-[#923D20] ring-1 ring-[#E8DC CE]/60">
+              <span className="flex h-12 w-12 sm:h-13 sm:w-13 shrink-0 items-center justify-center rounded-full bg-[#F5ECE2] text-[#923D20] ring-1 ring-[#E8DCCE]/60">
                 <Leaf className="h-6 w-6 stroke-[1.75]" />
               </span>
               <div>
@@ -253,7 +255,9 @@ export default async function HomePage() {
                     <Users className="h-5 w-5" />
                   </span>
                   <div>
-                    <strong className="block text-xl sm:text-2xl font-bold text-[#1F1A17] leading-none">5.000+</strong>
+                    <strong className="block text-xl sm:text-2xl font-bold text-[#1F1A17] leading-none">
+                      {new Intl.NumberFormat('vi-VN').format(customersCount)}+
+                    </strong>
                     <span className="mt-1 block text-xs text-[#7A6E65]">Lượt khách tin yêu</span>
                   </div>
                 </div>
@@ -266,8 +270,12 @@ export default async function HomePage() {
                     <Star className="h-5 w-5 fill-[#8D381B]" />
                   </span>
                   <div>
-                    <strong className="block text-xl sm:text-2xl font-bold text-[#1F1A17] leading-none">4.9 ★</strong>
-                    <span className="mt-1 block text-xs text-[#7A6E65]">1.200+ đánh giá</span>
+                    <strong className="block text-xl sm:text-2xl font-bold text-[#1F1A17] leading-none">
+                      {rating?.average || '5.0'} ★
+                    </strong>
+                    <span className="mt-1 block text-xs text-[#7A6E65]">
+                      {new Intl.NumberFormat('vi-VN').format(rating?.total || 0)}+ đánh giá
+                    </span>
                   </div>
                 </div>
 
@@ -637,50 +645,85 @@ export default async function HomePage() {
 
       {/* Team */}
       {staff.length > 0 && (
-        <section id="doi-ngu" className="scroll-mt-20 bg-card py-20 lg:py-24">
-          <div className="mx-auto max-w-[1200px] px-6">
-            <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <section id="doi-ngu" className="scroll-mt-20 bg-[#FAF7F2] py-20 lg:py-28 relative overflow-hidden">
+          {/* Decorative background element */}
+          <div className="pointer-events-none absolute -right-20 top-20 h-72 w-72 rounded-full bg-[#EFE6DC]/50 blur-3xl" />
+          
+          <div className="relative z-10 mx-auto max-w-[1360px] px-6 sm:px-8 lg:px-12">
+            <div className="mb-14 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <span className="eyebrow">Đội ngũ kỹ thuật viên</span>
-                <h2 className="section-heading mt-3">Đôi tay bạn có thể tin tưởng.</h2>
+                <span className="text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-[#8D381B]">
+                  ĐỘI NGŨ KỸ THUẬT VIÊN
+                </span>
+                <h2 className="mt-4 font-serif text-3xl sm:text-4xl lg:text-5xl font-normal text-[#1E130D]">
+                  Đôi tay bạn có thể <span className="italic font-serif text-[#8D381B]">tin tưởng.</span>
+                </h2>
               </div>
-              <p className="max-w-[390px] text-[15px] leading-[1.75] text-muted-foreground">
-                Bạn có thể chọn đúng kỹ thuật viên mình thích khi đặt lịch.
+              <p className="max-w-[390px] text-sm leading-relaxed text-[#736357] font-light">
+                Mỗi kỹ thuật viên tại Lumière Spa đều được đào tạo chuyên sâu. Bạn hoàn toàn có thể chọn người quen thuộc của mình khi đặt lịch.
               </p>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {staff.map((m) => (
-                <article key={m.id} className="flex flex-col rounded-2xl border border-border bg-background p-6">
+                <article
+                  key={m.id}
+                  className="group flex flex-col rounded-[24px] border border-[#EFE5D8] bg-white p-6 shadow-[0_4px_24px_rgba(30,19,13,0.03)] transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(30,19,13,0.08)] hover:border-[#DCC6B3]"
+                >
                   <div className="flex items-center gap-4">
                     {m.avatar_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={m.avatar_url} alt={m.name} width={64} height={64} className="h-16 w-16 rounded-full object-cover" />
+                      <img
+                        src={m.avatar_url}
+                        alt={m.name}
+                        width={72}
+                        height={72}
+                        className="h-16 w-16 sm:h-18 sm:w-18 rounded-full object-cover shadow-sm transition-transform duration-500 group-hover:scale-105"
+                      />
                     ) : (
-                      <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 font-serif text-2xl text-primary">
+                      <span className="flex h-16 w-16 sm:h-18 sm:w-18 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#F5ECE1] to-[#EAE0D3] font-serif text-2xl font-bold text-[#8D381B] shadow-inner transition-transform duration-500 group-hover:scale-105">
                         {givenName(m.name).charAt(0)}
                       </span>
                     )}
                     <div>
-                      <h3 className="font-serif text-xl text-foreground">{m.name}</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-serif text-lg sm:text-xl font-semibold text-[#1E130D] group-hover:text-[#8D381B] transition-colors">
+                        {m.name}
+                      </h3>
+                      <p className="text-[13px] text-[#8A796D] mt-0.5">
                         {m.role === 'therapist' ? 'Kỹ thuật viên' : m.role}
-                        {m.years_experience ? ` · ${m.years_experience} năm kinh nghiệm` : ''}
+                        {m.years_experience ? ` · ${m.years_experience} năm K.N` : ''}
                       </p>
                     </div>
                   </div>
+                  
                   {(m.specialties?.length ?? 0) > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-1.5">
+                    <div className="mt-5 flex flex-wrap gap-2">
                       {m.specialties!.map((sp) => (
-                        <span key={sp} className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
+                        <span
+                          key={sp}
+                          className="rounded-full border border-[#F0EAE1] bg-[#FAF6F0] px-3 py-1 text-[11px] font-medium text-[#736357]"
+                        >
                           {sp}
                         </span>
                       ))}
                     </div>
                   )}
-                  {m.bio && <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{m.bio}</p>}
-                  <Link href={`/booking?staff=${m.id}`} className="mt-auto inline-flex items-center gap-1 pt-5 text-sm font-bold text-primary">
-                    Đặt lịch với {givenName(m.name)} <ArrowRight className="h-4 w-4" />
-                  </Link>
+                  
+                  {m.bio && (
+                    <p className="mt-5 text-[13px] leading-relaxed text-[#736357] font-light line-clamp-3">
+                      {m.bio}
+                    </p>
+                  )}
+                  
+                  <div className="mt-auto pt-6">
+                    <Link
+                      href={`/booking?staff=${m.id}`}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#FAF5EE] px-4 py-2.5 text-xs font-semibold text-[#8D381B] transition-all duration-300 group-hover:bg-[#8D381B] group-hover:text-white"
+                    >
+                      <span>Đặt lịch với {givenName(m.name)}</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
                 </article>
               ))}
             </div>
@@ -869,37 +912,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Reviews — only real, published reviews from completed appointments */}
-      {rating && reviews.length > 0 && (
-        <section id="danh-gia" className="scroll-mt-20 py-20 lg:py-24">
-          <div className="mx-auto max-w-[1200px] px-6">
-            <div className="mb-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <span className="eyebrow">Khách hàng nói gì</span>
-                <h2 className="section-heading mt-3">
-                  {rating.average.toLocaleString('vi-VN')}/5 từ {rating.total} lượt đánh giá.
-                </h2>
-              </div>
-              <p className="max-w-[390px] text-sm leading-relaxed text-muted-foreground">
-                Chỉ khách đã hoàn thành buổi hẹn mới đánh giá được, từ trang Tài khoản của mình.
-              </p>
-            </div>
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {reviews.map((r) => (
-                <figure key={r.id} className="card-base flex flex-col p-6">
-                  <Quote className="h-6 w-6 text-accent" />
-                  <Stars value={r.rating} className="mt-3" />
-                  <blockquote className="mt-3 flex-1 text-[15px] leading-relaxed text-foreground">“{r.comment}”</blockquote>
-                  <figcaption className="mt-5 text-sm text-muted-foreground">
-                    <b className="text-foreground">{r.author}</b>
-                    {r.service_name ? ` · ${r.service_name}` : ''}
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+
 
       {/* Contact + callback form */}
       <section id="lien-he" className="relative scroll-mt-20 overflow-hidden bg-[#FAF5EE] py-20 lg:py-28">
