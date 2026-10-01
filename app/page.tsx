@@ -15,7 +15,6 @@ import {
   Layers,
   Leaf,
   MapPin,
-  MessageCircle,
   Navigation,
   Percent,
   Phone,
@@ -432,7 +431,7 @@ export default async function HomePage() {
                 <div className="my-5 flex items-baseline gap-2">
                   <span className="font-serif italic text-3xl sm:text-4xl text-[#E8C296]">Giảm</span>
                   <span className="font-serif text-5xl sm:text-6xl font-normal text-[#E8C296] tracking-normal">
-                    {offerPct > 0 ? `${offerPct}%` : '10%'}
+                    {offerPct > 0 ? `${offerPct}%` : '—'}
                   </span>
                 </div>
 
@@ -500,7 +499,7 @@ export default async function HomePage() {
                     <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[#F5ECE2] text-[#8D381B]">
                       <CheckCircle2 className="h-3 w-3" />
                     </span>
-                    <span>Nhận thiệp in hoặc mã quà tặng qua Zalo</span>
+                    <span>Nhận thiệp in hoặc mã quà tặng qua email</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[#F5ECE2] text-[#8D381B]">
@@ -1019,15 +1018,6 @@ export default async function HomePage() {
                 >
                   <PhoneCall className="h-4 w-4" />
                   <span>Gọi {SITE.phone}</span>
-                </a>
-                <a
-                  href={SITE.zalo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-xl border border-[#D9C4B2] bg-[#FDFBF7] px-4 py-3.5 text-xs sm:text-sm font-semibold text-[#8D381B] transition-all hover:bg-[#F5ECE1] hover:border-[#8D381B]/40 active:scale-[0.99]"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  <span>Chat Zalo</span>
                 </a>
                 <a
                   href={SITE.mapUrl}

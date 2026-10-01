@@ -18,8 +18,6 @@ import type { RevenuePoint } from '@/components/admin/revenue-chart';
 import { AppointmentRow } from '@/components/appointment-row';
 import { PageLoader } from '@/components/page-loader';
 import { StatCard } from '@/components/stat-card';
-import { ReminderQueue } from '@/components/admin/reminder-queue';
-import { ReviewRequestQueue } from '@/components/admin/review-request-queue';
 
 // recharts is heavy — load it only on the dashboard, after first paint
 const RevenueChart = dynamic(() => import('@/components/admin/revenue-chart'), {
@@ -127,8 +125,6 @@ export default function AdminDashboard() {
         </Link>
       )}
 
-      <ReminderQueue />
-      <ReviewRequestQueue />
 
       <section className="card-base p-5 sm:p-6">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">

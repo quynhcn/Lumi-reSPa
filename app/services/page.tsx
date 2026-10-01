@@ -139,8 +139,8 @@ const CATEGORY_TABS = [
 ];
 
 export default function ServicesPage() {
-  const [services, setServices] = useState<Service[]>(DEFAULT_SERVICES);
-  const [loading, setLoading] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDuration, setSelectedDuration] = useState<string>('all');

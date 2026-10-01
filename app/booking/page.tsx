@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, Clock, Gift, Info, Loader2, Mail, Phone, ShieldCheck, Timer, User, UserCircle, Users, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, Clock, Gift, Info, Loader2, Mail, Phone, Timer, User, UserCircle, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
@@ -16,8 +16,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { IconInput } from '@/components/icon-input';
 import { PageLoader } from '@/components/page-loader';
-import { sendPhoneOtp, verifyPhoneOtp } from '@/lib/phone-auth';
-import { OtpCodeField, useResendCountdown } from '@/components/otp-code-field';
 import { SiteHeader } from '@/components/site-header';
 import { AiQuickBook } from '@/components/booking/ai-quick-book';
 import { BookingSummary, type Pricing } from '@/components/booking/booking-summary';
@@ -96,8 +94,8 @@ function BookingContent() {
   const preferredStaff = params.get('staff'); // from "Đặt lịch với …" on the landing page
   const leadId = params.get('lead'); // front desk booking from a callback request
   const { user, role, loading: authLoading } = useAuth();
-  // Guests can go through the whole flow; the phone number is verified by SMS code at the end
-  const authReady = !authLoading && (!user || !!role);
+  // Customers register/sign in before booking; staff/admin may still book for walk-ins.
+  const authReady = !authLoading && !!user && !!role;
   // Admin/staff book on behalf of a walk-in or phone customer (matched by phone in the RPC)
   const isFrontDesk = role === 'admin' || role === 'staff';
 
@@ -129,10 +127,14 @@ function BookingContent() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [holder] = useState(tabHolderId);
   const [holdUntil, setHoldUntil] = useState<Date | null>(null);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
-  const countdown = useResendCountdown();
   const loadedRef = useRef(false);
+
+  useEffect(() => {
+    if (authLoading || user) return;
+    const query = params.toString();
+    const destination = `/booking${query ? `?${query}` : ''}`;
+    router.replace(`/signup?redirect=${encodeURIComponent(destination)}`);
+  }, [authLoading, params, router, user]);
 
   // ── Initial data ──────────────────────────────────────────────
   useEffect(() => {
@@ -323,7 +325,7 @@ function BookingContent() {
   ];
   const canGoTo = (target: number) => stepValid.slice(0, target).every(Boolean);
 
-  // ── Hold the chosen time for 10 minutes while the form / SMS code is filled in ──
+  // ── Hold the chosen time for 10 minutes while the form is filled in ──
   useEffect(() => {
     if (step !== LAST_STEP || !serviceId || !staffId || !date || !time) return;
     let cancelled = false;
@@ -346,38 +348,8 @@ function BookingContent() {
     };
   }, [step, serviceId, staffId, date, time, holder]);
 
-  const sendCode = async () => {
-    setSubmitting(true);
-    const err = await sendPhoneOtp(customer.phone, customer.name);
-    setSubmitting(false);
-    if (err) {
-      toast.error(err);
-      return;
-    }
-    setOtpSent(true);
-    countdown.restart();
-    track('send_otp');
-  };
-
   const handleConfirm = async () => {
     if (!service || !staffId || !canGoTo(STEPS.length)) return;
-
-    // Guest: verify the phone number first (creates / signs in the account), then book
-    if (!user) {
-      if (!otpSent) return sendCode();
-      if (otp.length !== 6) {
-        toast.error('Nhập đủ 6 số của mã xác minh');
-        return;
-      }
-      setSubmitting(true);
-      const { error: otpError } = await verifyPhoneOtp(customer.phone, otp);
-      if (otpError) {
-        setSubmitting(false);
-        toast.error(otpError);
-        return;
-      }
-      track('verify_phone');
-    }
 
     setSubmitting(true);
     let bookedRow: Booked | null = null;
@@ -446,7 +418,7 @@ function BookingContent() {
           <h1 className="page-title">{booked.status === 'pending' ? 'Đã nhận lịch — chờ xác nhận' : 'Đặt lịch thành công'}</h1>
           <p className="mb-8 mt-2 text-muted-foreground">
             {isFrontDesk
-              ? `Đã giữ chỗ cho ${customer.name.trim()}. Gửi mã đặt lịch cho khách qua Zalo/SMS${leadId ? '; yêu cầu tư vấn đã chuyển sang “Đã đặt lịch”' : ''}.`
+              ? `Đã giữ chỗ cho ${customer.name.trim()}.${leadId ? ' Yêu cầu tư vấn đã chuyển sang “Đã đặt lịch”.' : ''}`
               : booked.status === 'pending'
                 ? 'Spa đã nhận lịch và sẽ gọi cho bạn để xác nhận trong giờ làm việc. Vui lòng để ý điện thoại nhé.'
                 : 'Cảm ơn bạn! Vui lòng lưu mã đặt lịch và đến trước giờ hẹn 10 phút.'}
@@ -470,12 +442,12 @@ function BookingContent() {
     <BookingSummary service={service} staffName={staffName} date={date} time={time} pricing={quote}>
       {step === LAST_STEP && (
         <Button size="lg" className="w-full" onClick={handleConfirm} disabled={submitting || !canGoTo(STEPS.length)}>
-          {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : user ? <Check className="mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-          {user ? 'Xác nhận đặt lịch' : otpSent ? 'Xác minh & đặt lịch' : 'Gửi mã xác minh SMS'}
+          {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+          Xác nhận đặt lịch
         </Button>
       )}
-      {step === LAST_STEP && !user && firstVisitPct > 0 && (
-        <p className="mt-3 text-center text-xs text-success">Khách mới được giảm {firstVisitPct}% — tự trừ sau khi xác minh số điện thoại.</p>
+      {step === LAST_STEP && !isFrontDesk && firstVisitPct > 0 && (
+        <p className="mt-3 text-center text-xs text-success">Khách mới được giảm {firstVisitPct}% — hệ thống tự động áp dụng.</p>
       )}
       {step === LAST_STEP && holdUntil && holdUntil > new Date() && (
         <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
@@ -735,27 +707,8 @@ function BookingContent() {
                 >
                   <div className="max-w-md space-y-4">
                     <IconInput id="bk-name" label="Họ và tên *" icon={User} value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} placeholder="Nguyễn Văn A" autoComplete="name" />
-                    <IconInput id="bk-phone" label="Số điện thoại *" icon={Phone} type="tel" inputMode="tel" value={customer.phone} onChange={(e) => { setCustomer({ ...customer, phone: e.target.value }); setOtpSent(false); setOtp(''); }} placeholder="0987 654 321" autoComplete="tel" />
+                    <IconInput id="bk-phone" label="Số điện thoại *" icon={Phone} type="tel" inputMode="tel" value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} placeholder="0987 654 321" autoComplete="tel" />
                     {customer.phone && !isValidPhone(customer.phone) && <p className="-mt-2 text-xs text-destructive">Số điện thoại chưa hợp lệ</p>}
-                    {!user && !otpSent && (
-                      <p className="-mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
-                        <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                        Không cần tạo tài khoản: bấm “Gửi mã xác minh SMS”, nhập mã 6 số là xong. Đã có tài khoản email?{' '}
-                        <a href={`/sign-in?redirect=${encodeURIComponent('/booking' + (typeof window !== 'undefined' ? window.location.search : ''))}`} className="font-semibold text-primary hover:underline">Đăng nhập</a>
-                      </p>
-                    )}
-                    {!user && otpSent && (
-                      <OtpCodeField
-                        id="bk-otp"
-                        phone={customer.phone}
-                        value={otp}
-                        onChange={setOtp}
-                        resendIn={countdown.left}
-                        onResend={sendCode}
-                        onChangePhone={() => { setOtpSent(false); setOtp(''); document.getElementById('bk-phone')?.focus(); }}
-                        autoFocus
-                      />
-                    )}
                     <IconInput id="bk-email" label="Email (tùy chọn)" icon={Mail} type="email" value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} placeholder="ten@example.com" autoComplete="email" />
                     <div className="space-y-1.5">
                       <label htmlFor="bk-notes" className="block text-sm font-semibold">Ghi chú (tùy chọn)</label>

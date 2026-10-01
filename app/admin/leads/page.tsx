@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CalendarPlus, Inbox, MessageCircle, Phone } from 'lucide-react';
+import { CalendarPlus, Inbox, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
-import { telHref, zaloHref } from '@/lib/site-config';
+import { telHref } from '@/lib/site-config';
 import { LEAD_STATUS_LABELS, type Lead, type LeadStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PageLoader } from '@/components/page-loader';
@@ -130,11 +130,6 @@ export default function LeadsPage() {
                 <Button asChild size="sm" className="h-8">
                   <a href={telHref(l.phone)} onClick={() => l.status === 'new' && setStatus(l, 'contacted')}>
                     <Phone className="mr-1 h-3.5 w-3.5" /> Gọi
-                  </a>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="h-8">
-                  <a href={zaloHref(l.phone)} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="mr-1 h-3.5 w-3.5" /> Zalo
                   </a>
                 </Button>
                 <Button asChild size="sm" variant="outline" className="h-8">

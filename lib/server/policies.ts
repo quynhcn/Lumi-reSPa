@@ -58,8 +58,10 @@ const STAFF_PUBLIC_COLUMNS = [
 
 const STAFF_APPOINTMENT_COLUMNS = [
   'id', 'booking_code', 'customer_id', 'staff_id', 'service_id', 'start_time', 'end_time',
-  'status', 'duration_min', 'notes', 'source', 'reminded_at', 'created_at', 'updated_at',
+  'status', 'duration_min', 'notes', 'source', 'created_at', 'updated_at',
 ];
+
+const STAFF_CUSTOMER_COLUMNS = ['id', 'name', 'phone', 'email'];
 
 export const TABLE_POLICIES: Record<string, TablePolicy> = {
   services: catalog,
@@ -106,7 +108,14 @@ export const TABLE_POLICIES: Record<string, TablePolicy> = {
 
   customers: {
     select: (a) => {
-      if (a.role === 'admin' || a.role === 'staff') return { columns: '*' };
+      if (a.role === 'admin') return { columns: '*' };
+      if (a.role === 'staff' && a.staffId) {
+        return {
+          columns: STAFF_CUSTOMER_COLUMNS,
+          where: (t, bind) =>
+            `EXISTS (SELECT 1 FROM public.appointments ap WHERE ap.customer_id = ${t}.id AND ap.staff_id = ${bind(a.staffId)})`,
+        };
+      }
       if (!a.userId) return null;
       return { columns: '*', where: (t, bind) => `${t}.user_id = ${bind(a.userId)}` };
     },
@@ -132,7 +141,7 @@ export const TABLE_POLICIES: Record<string, TablePolicy> = {
     },
     update: (a) => {
       // Status changes must go through transition_appointment so the state machine is enforced in PostgreSQL.
-      if (isAdmin(a)) return { columns: ['notes', 'reminded_at'] };
+      if (isAdmin(a)) return { columns: ['notes'] };
       return null;
     },
     // Tạo lịch chỉ qua RPC book_appointment (giá, ưu đãi, chống trùng tính trong DB)

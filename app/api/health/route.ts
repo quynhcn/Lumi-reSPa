@@ -2,7 +2,7 @@ import { getPool } from '@/lib/server/db';
 import { json } from '@/lib/server/http';
 
 export const dynamic = 'force-dynamic';
-const REQUIRED_MIGRATION = '0006_security_and_workflow.sql';
+const REQUIRED_MIGRATION = '0011_assign_active_staff_to_catalog.sql';
 
 export async function GET() {
   try {

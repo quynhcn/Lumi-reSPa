@@ -37,14 +37,18 @@ export function AiQuickBook({ services, onApply }: AiQuickBookProps) {
       const res = await fetch('/api/ai/parse-booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: input.trim(), services })
+        body: JSON.stringify({ input: input.trim() })
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || 'Có lỗi khi phân tích bằng AI');
         return;
       }
-      setParsed(data);
+      if (!Array.isArray(data.unclear_fields) || !Array.isArray(data.understood_fields)) {
+        toast.error('Phản hồi phân tích không hợp lệ');
+        return;
+      }
+      setParsed(data as ParsedBooking);
       track('quick_book_parse', { understood: data.understood_fields?.length || 0 });
     } catch (e) {
       toast.error('Lỗi kết nối AI');

@@ -3,7 +3,7 @@
  *
  * Booking funnel events (in order) — build a "Funnel exploration" in GA4 with these steps:
  *   view_services → select_service → select_staff → select_slot → begin_checkout → booking_complete
- * Other events: quick_book_parse, lead_submit, click_call, click_zalo, click_directions,
+ * Other events: quick_book_parse, lead_submit, click_call, click_directions,
  *   apply_gift_code, sign_up, login, review_submit, cancel_booking
  */
 type Params = Record<string, string | number | boolean | undefined>;

@@ -26,7 +26,7 @@ type Invite = {
   voucher_expires: string | null;
 };
 
-/** Review link sent by Zalo/SMS after a visit — works without signing in (the token is the key). */
+/** Review link works without signing in; the unguessable token is the key. */
 export default function ReviewByLinkPage() {
   const { token } = useParams<{ token: string }>();
   const [invite, setInvite] = useState<Invite | null>(null);

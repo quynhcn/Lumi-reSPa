@@ -21,9 +21,7 @@ export DATABASE_URL="$TEST_URL"
 node scripts/db-migrate.mjs
 psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f tests/api/seed.sql
 
-export NODE_ENV=production COOKIE_INSECURE=true TRUST_PROXY=1 \
-       SMS_PROVIDER=console SMS_ALLOW_CONSOLE=true \
-       SMS_TEST_OTP="84901234567:123456,84902000002:654321" CRON_SECRET=test-cron-secret
+export NODE_ENV=production COOKIE_INSECURE=true TRUST_PROXY=1 CRON_SECRET=test-cron-secret
 npx next build > /tmp/spaflow-build.log 2>&1 || { tail -40 /tmp/spaflow-build.log; exit 1; }
 setsid npx next start -p "$PORT" > /tmp/spaflow-server.log 2>&1 &
 SERVER=$!

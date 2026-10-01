@@ -61,7 +61,6 @@ const db = createDbClient({
 type Listener = (event: AuthChangeEvent, session: Session | null) => void;
 const listeners = new Set<Listener>();
 let loaded: Promise<Session | null> | null = null;
-const pendingOtpName = new Map<string, string>();
 
 function emit(event: AuthChangeEvent, session: Session | null) {
   loaded = Promise.resolve(session);
@@ -120,14 +119,6 @@ const auth = {
   },
   signUp({ email, password, options }: { email: string; password: string; options?: { data?: Record<string, unknown> } }) {
     return authCall('/api/auth/signup', { email, password, data: options?.data ?? {} });
-  },
-  async signInWithOtp({ phone, options }: { phone: string; options?: { shouldCreateUser?: boolean; data?: { name?: string } } }) {
-    if (options?.data?.name) pendingOtpName.set(phone, options.data.name);
-    const r = await authCall('/api/auth/otp/send', { phone }, false);
-    return { data: { session: null, user: null }, error: r.error };
-  },
-  verifyOtp({ phone, token }: { phone: string; token: string; type?: 'sms' }) {
-    return authCall('/api/auth/otp/verify', { phone, token, name: pendingOtpName.get(phone) });
   },
   async signOut() {
     try {

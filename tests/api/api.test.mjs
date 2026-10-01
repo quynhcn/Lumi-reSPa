@@ -10,10 +10,10 @@ import pg from 'pg';
 const BASE = process.env.BASE_URL || 'http://localhost:3100';
 const db = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
-const SVC_BODY = '10000000-0000-0000-0000-000000000001';
-const SVC_FACIAL = '10000000-0000-0000-0000-000000000002';
-const LAN = '20000000-0000-0000-0000-000000000001';
-const HA = '20000000-0000-0000-0000-000000000002';
+const SVC_BODY = '90000000-0000-4000-8000-000000000001';
+const SVC_FACIAL = '90000000-0000-4000-8000-000000000002';
+const LAN = 'a0000000-0000-4000-8000-000000000001';
+const HA = 'a0000000-0000-4000-8000-000000000002';
 
 const vnDate = (offsetDays) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(Date.now() + offsetDays * 86400_000);
@@ -135,7 +135,9 @@ test('đăng xuất → phiên bị huỷ ở server', async () => {
 
 // ── Quyền đọc dữ liệu ────────────────────────────────────────────────────
 test('khách vãng lai: đọc được danh mục, không đọc được dữ liệu cá nhân', async () => {
-  assert.equal((await anon.select('services', { filters: [{ column: 'is_active', op: 'eq', value: true }] })).body.data.length, 2);
+  const activeServices = (await anon.select('services', { filters: [{ column: 'is_active', op: 'eq', value: true }] })).body.data;
+  assert.ok(activeServices.some((service) => service.id === SVC_BODY));
+  assert.ok(!activeServices.some((service) => service.id === '90000000-0000-4000-8000-000000000003'));
   const st = await anon.select('staff');
   assert.ok(st.body.data.every((x) => !('phone' in x) && !('email' in x)), 'staff.phone/email bị ẩn');
   for (const t of ['customers', 'appointments', 'profiles', 'leads', 'gift_cards', 'staff_schedules', 'staff_time_off', 'slot_holds', 'pg_user']) {
@@ -172,7 +174,8 @@ test('select lồng nhau !inner + count head', async () => {
   assert.equal(r.body.data.length, 1);
   assert.equal(r.body.data[0].services.name, 'Massage Body');
   const c = await admin.select('services', { select: 'id', count: 'exact', head: true });
-  assert.equal(c.body.count, 3);
+  const expectedCount = await db.query('SELECT count(*)::int AS count FROM services');
+  assert.equal(c.body.count, expectedCount.rows[0].count);
 });
 
 // ── Đặt lịch ────────────────────────────────────────────────────────────
@@ -201,7 +204,7 @@ test('đặt trùng giờ cùng KTV → SLOT_UNAVAILABLE', async () => {
   const b = await cust2.signup('khach2@test.vn', 'Lê Thị Bình', '0977777777').then(() =>
     cust2.rpc('book_appointment', {
       p_service_id: SVC_BODY, p_staff_id: LAN, p_date: D1, p_time: '10:00',
-      p_name: 'Lê Thị Bình', p_phone: '0977777777', p_email: '', p_notes: '',
+      p_name: 'Lê Thị Bình', p_phone: '0977777777', p_email: 'khach2@test.vn', p_notes: '',
     })
   );
   assert.equal(b.status, 400);
@@ -264,7 +267,7 @@ test('KTV: chỉ thấy lịch của mình, chỉ đổi được trạng thái'
 test('đổi giờ (khách) và huỷ lịch (khách)', async () => {
   const b = await cust2.rpc('book_appointment', {
     p_service_id: SVC_FACIAL, p_staff_id: null, p_date: D2, p_time: '14:00',
-    p_name: 'Lê Thị Bình', p_phone: '0977777777', p_email: '', p_notes: '',
+    p_name: 'Lê Thị Bình', p_phone: '0977777777', p_email: 'khach2@test.vn', p_notes: '',
   });
   assert.equal(b.status, 200, JSON.stringify(b.body));
   const apt = (await cust2.select('appointments')).body.data[0];
@@ -328,58 +331,6 @@ test('cài đặt ưu đãi: chỉ admin lưu được, lưu thật vào DB, ch�
   const g = await anon.req('/api/settings', null, { method: 'GET' });
   assert.equal(g.body.first_visit_discount_pct, 15);
   assert.equal(g.body.no_show_threshold, 3);
-});
-
-test('nhắc lịch: chỉ admin/cron; gửi xong mới đánh dấu reminded_at', async () => {
-  const get = await anon.req('/api/reminders/send?hours=48', null, { method: 'GET' });
-  assert.equal(get.status, 405, 'endpoint có side effect không chấp nhận GET');
-  let r = await anon.req('/api/reminders/send?hours=48', {});
-  assert.equal(r.status, 403);
-  // lịch còn mở duy nhất của khách 2 đã huỷ; tạo thêm 1 lịch để nhắc
-  await cust2.rpc('book_appointment', {
-    p_service_id: SVC_FACIAL, p_staff_id: HA, p_date: D1, p_time: '16:00',
-    p_name: 'Lê Thị Bình', p_phone: '0977777777', p_email: '', p_notes: '',
-  });
-  r = await admin.req('/api/reminders/send?hours=48', {});
-  assert.equal(r.status, 200, JSON.stringify(r.body));
-  assert.equal(r.body.count, 1);
-  const again = await admin.req('/api/reminders/send?hours=48', {});
-  assert.equal(again.body.count, 0, 'không nhắc trùng');
-});
-
-// ── SMS OTP ─────────────────────────────────────────────────────────────
-test('OTP: lễ tân đặt hộ → khách xác minh SĐT → nhận lại lịch sử', async () => {
-  const b = await admin.rpc('book_appointment', {
-    p_service_id: SVC_BODY, p_staff_id: HA, p_date: D2, p_time: '09:00',
-    p_name: 'Phạm Walkin', p_phone: '0901234567', p_email: '', p_notes: '',
-  });
-  assert.equal(b.status, 200, JSON.stringify(b.body));
-  const g = new Client();
-  let r = await g.req('/api/auth/otp/send', { phone: '0901234567' });
-  assert.equal(r.status, 200, JSON.stringify(r.body));
-  r = await g.req('/api/auth/otp/send', { phone: '0901234567' });
-  assert.equal(r.status, 429, 'gửi lại trong 60s bị chặn');
-  r = await g.req('/api/auth/otp/verify', { phone: '0901234567', token: '000000' });
-  assert.equal(r.status, 400);
-  r = await g.req('/api/auth/otp/verify', { phone: '+84 901 234 567', token: '123456', name: 'Phạm Walkin' });
-  assert.equal(r.status, 200, JSON.stringify(r.body));
-  assert.equal(r.body.session.user.phone, '84901234567');
-  const mine = await g.select('appointments');
-  assert.equal(mine.body.data.length, 1);
-});
-
-test('OTP: sai 5 lần thì mã bị vô hiệu dù sau đó nhập đúng', async () => {
-  const g = new Client();
-  await g.req('/api/auth/otp/send', { phone: '0902000002' });
-  for (let i = 0; i < 5; i++) await g.req('/api/auth/otp/verify', { phone: '0902000002', token: '111111' });
-  const r = await g.req('/api/auth/otp/verify', { phone: '0902000002', token: '654321' });
-  assert.equal(r.status, 400);
-});
-
-test('OTP: SMS chưa cấu hình cho số thường → báo "provider disabled"', async () => {
-  const r = await new Client().req('/api/auth/otp/send', { phone: '0903999999' });
-  if (process.env.EXPECT_SMS_DISABLED === '1') assert.match(r.body.error.message, /provider disabled/);
-  else assert.ok([200, 400].includes(r.status));
 });
 
 // ── Form để lại SĐT ─────────────────────────────────────────────────────

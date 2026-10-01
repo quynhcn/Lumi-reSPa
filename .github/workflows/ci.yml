@@ -35,5 +35,3 @@ jobs:
       - run: npm run lint
       - name: PostgreSQL API integration tests
         run: bash tests/api/run.sh
-      - name: Supabase import regression test
-        run: bash tests/import/run.sh

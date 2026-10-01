@@ -91,7 +91,6 @@ export interface Appointment {
   gift_card_id?: string | null;
   gift_amount?: number;
   source?: 'online' | 'front_desk';
-  reminded_at?: string | null;
   duration_min: number;
   notes: string | null;
   created_at: string;

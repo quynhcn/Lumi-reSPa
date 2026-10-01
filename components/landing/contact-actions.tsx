@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CalendarCheck, MapPin, MessageCircle, Phone } from 'lucide-react';
+import { CalendarCheck, MapPin, Phone } from 'lucide-react';
 import { SITE, telHref } from '@/lib/site-config';
 import { track } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
@@ -31,16 +31,13 @@ export function OpenStatus({ className }: { className?: string }) {
   );
 }
 
-/** Call / Zalo / Directions buttons (with click tracking). */
+/** Call / Directions buttons (with click tracking). */
 export function ContactButtons({ className }: { className?: string }) {
   const btn = 'inline-flex h-11 items-center justify-center gap-2 rounded-md border border-primary/30 px-4 text-sm font-semibold text-primary transition-colors hover:bg-secondary';
   return (
     <div className={cn('flex flex-wrap gap-2', className)}>
       <a href={telHref(SITE.phone)} onClick={() => track('click_call', { source: 'contact' })} className={btn}>
         <Phone className="h-4 w-4" /> Gọi {SITE.phone}
-      </a>
-      <a href={SITE.zalo} target="_blank" rel="noopener noreferrer" onClick={() => track('click_zalo', { source: 'contact' })} className={btn}>
-        <MessageCircle className="h-4 w-4" /> Chat Zalo
       </a>
       <a href={SITE.mapUrl} target="_blank" rel="noopener noreferrer" onClick={() => track('click_directions')} className={btn}>
         <MapPin className="h-4 w-4" /> Chỉ đường
@@ -49,7 +46,7 @@ export function ContactButtons({ className }: { className?: string }) {
   );
 }
 
-/** Phones: sticky bottom bar with the three actions people actually take. */
+/** Phones: sticky bottom bar with the primary actions. */
 export function MobileActionBar() {
   const item = 'flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-semibold';
   return (
@@ -59,9 +56,6 @@ export function MobileActionBar() {
     >
       <a href={telHref(SITE.phone)} onClick={() => track('click_call', { source: 'mobile_bar' })} className={cn(item, 'text-foreground')}>
         <Phone className="h-5 w-5" /> Gọi
-      </a>
-      <a href={SITE.zalo} target="_blank" rel="noopener noreferrer" onClick={() => track('click_zalo', { source: 'mobile_bar' })} className={cn(item, 'text-foreground')}>
-        <MessageCircle className="h-5 w-5" /> Zalo
       </a>
       <Link href="/booking" className={cn(item, 'm-1.5 rounded-lg bg-primary text-primary-foreground')}>
         <CalendarCheck className="h-5 w-5" /> Đặt lịch

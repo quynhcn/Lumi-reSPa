@@ -104,9 +104,11 @@ export function ServiceShowcase({ services }: { services?: Service[] }) {
         detailUrl: '/services',
         iconType: DEFAULT_SERVICES[i]?.iconType || 'lotus',
       }))
-    : DEFAULT_SERVICES;
+    : [];
 
   const total = showcaseItems.length;
+
+  if (total === 0) return null;
 
   const handlePrev = () => {
     setActiveIdx((prev) => (prev - 1 + total) % total);

@@ -33,7 +33,9 @@ try {
     const sql = fs.readFileSync(path.join(dir, f), 'utf8');
     const sum = crypto.createHash('sha256').update(sql).digest('hex').slice(0, 16);
     if (applied.has(f)) {
-      if (applied.get(f) !== sum) console.warn(`! ${f} đã áp dụng nhưng nội dung file đã bị sửa (checksum khác). Hãy tạo migration mới thay vì sửa file cũ.`);
+      if (applied.get(f) !== sum) {
+        throw new Error(`${f} đã áp dụng nhưng checksum khác. Không tiếp tục trên schema đã bị thay đổi; hãy tạo migration mới hoặc khôi phục file gốc.`);
+      }
       else console.log(`✓ ${f}`);
       continue;
     }

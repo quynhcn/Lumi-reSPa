@@ -1,86 +1,97 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
+import { parseBookingRequest, type ParsedBooking } from '@/lib/booking-parser';
+import { clientIp, rateLimited } from '@/lib/server/auth';
+import { getPool } from '@/lib/server/db';
+import { json, readJson } from '@/lib/server/http';
+import type { Service } from '@/lib/types';
+
+export const dynamic = 'force-dynamic';
+
+const requestSchema = z.object({ input: z.string().trim().min(2).max(500) }).strict();
+const nullableConfidence = z.enum(['high', 'low']).nullable();
+const parsedSchema = z.object({
+  service_id: z.string().uuid().nullable(),
+  service_name: z.string().max(200).nullable(),
+  service_confidence: nullableConfidence,
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  date_label: z.string().max(100).nullable(),
+  date_confidence: nullableConfidence,
+  time: z.string().regex(/^\d{2}:\d{2}$/).nullable(),
+  time_label: z.string().max(100).nullable(),
+  time_confidence: nullableConfidence,
+  gender_preference: z.enum(['female', 'male']).nullable(),
+  notes: z.string().max(500).nullable(),
+  understood_fields: z.array(z.string().max(100)).max(10),
+  unclear_fields: z.array(z.string().max(100)).max(10),
+});
+
+async function activeServices(): Promise<Service[]> {
+  const { rows } = await getPool().query(
+    `SELECT id, name, description, duration_min, price, category, image_url, is_active,
+            includes, compare_at_price, created_at, updated_at
+       FROM public.services WHERE is_active = true ORDER BY category, price`
+  );
+  return rows as Service[];
+}
+
+async function parseWithGemini(input: string, services: Service[]): Promise<ParsedBooking | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (process.env.AI_BOOKING_PROVIDER !== 'gemini' || !apiKey) return null;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const serviceList = services.map((service) => `${service.id}: ${service.name}`).join('\n');
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: `Extract spa booking details as JSON. Only use a service UUID from this list:\n${serviceList}\nReturn service_id, service_name, service_confidence, date, date_label, date_confidence, time, time_label, time_confidence, gender_preference, notes, understood_fields, unclear_fields.` }],
+          },
+          contents: [{ parts: [{ text: input }] }],
+          generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+        }),
+      }
+    );
+    if (!response.ok) return null;
+    const payload = await response.json();
+    const text = payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (typeof text !== 'string') return null;
+    const parsed = parsedSchema.safeParse(JSON.parse(text));
+    if (!parsed.success) return null;
+    if (parsed.data.service_id && !services.some((service) => service.id === parsed.data.service_id)) return null;
+    return { ...parsed.data, raw_input: input };
+  } catch (error) {
+    console.warn('[ai-booking] provider unavailable; using local parser', error instanceof Error ? error.name : 'unknown');
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function POST(req: NextRequest) {
+  const body = await readJson<unknown>(req);
+  if (body instanceof NextResponse) return body;
+  const parsedRequest = requestSchema.safeParse(body);
+  if (!parsedRequest.success) return json({ error: 'Yêu cầu không hợp lệ.' }, 400);
+
+  if (await rateLimited(`ai-booking:ip:${clientIp(req)}`, 20, 600)) {
+    return json({ error: 'Bạn thao tác quá nhanh. Vui lòng thử lại sau.' }, 429);
+  }
+
   try {
-    const { input, services } = await req.json();
-
-    if (!input) {
-      return NextResponse.json({ error: 'Missing input' }, { status: 400 });
-    }
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'Chưa cấu hình GEMINI_API_KEY trong file .env' },
-        { status: 500 }
-      );
-    }
-
-    const serviceNames = services.map((s: any) => `${s.id}: ${s.name}`).join('\n');
-    
-    // Yêu cầu AI xuất chuẩn cấu trúc ParsedBooking (để Frontend đọc được)
-    const systemInstruction = `
-Bạn là một trợ lý ảo của Lumière Spa. Nhiệm vụ của bạn là phân tích yêu cầu đặt lịch của khách hàng và trích xuất thông tin.
-Ngày hôm nay là: ${new Date().toLocaleDateString('vi-VN')}
-Giờ hiện tại là: ${new Date().toLocaleTimeString('vi-VN')}
-
-Danh sách dịch vụ đang có (ID: Tên):
-${serviceNames}
-
-Hãy trả về CHỈ MỘT OBJECT JSON duy nhất đúng định dạng sau, KHÔNG CÓ THÊM BẤT KỲ ĐOẠN TEXT NÀO KHÁC (kể cả markdown \`\`\`json):
-{
-  "service_id": "ID của dịch vụ phù hợp nhất (hoặc null nếu không rõ)",
-  "service_name": "Tên dịch vụ",
-  "service_confidence": "high" hoặc "low" hoặc null,
-  "date": "Ngày đặt lịch định dạng YYYY-MM-DD (hoặc null)",
-  "date_label": "Label của ngày (ví dụ: Hôm nay, Ngày mai, 25/10)",
-  "date_confidence": "high" hoặc "low" hoặc null,
-  "time": "Giờ đặt lịch định dạng HH:mm (hoặc null)",
-  "time_label": "Label giờ (ví dụ: 15:00, Sáng, Chiều)",
-  "time_confidence": "high" hoặc "low" hoặc null,
-  "gender_preference": "female" hoặc "male" hoặc null,
-  "notes": "Các ghi chú/yêu cầu đặc biệt được tổng hợp lại thành 1 chuỗi ngắn gọn (ví dụ: 'thích nhẹ tay, tránh cổ') hoặc null",
-  "understood_fields": ["danh sách các trường đã hiểu, vd: 'dịch vụ', 'ngày', 'giờ', 'yêu cầu đặc biệt'"],
-  "unclear_fields": ["danh sách các trường bị thiếu hoặc chưa rõ"]
-}
-`;
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: systemInstruction }]
-        },
-        contents: [
-          { parts: [{ text: input }] }
-        ],
-        generationConfig: {
-          temperature: 0, // Tính chính xác tuyệt đối
-          responseMimeType: "application/json"
-        }
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      console.error('Gemini API Error:', err);
-      return NextResponse.json({ error: 'Gemini API failed' }, { status: 502 });
-    }
-
-    const data = await response.json();
-    const resultText = data.candidates[0].content.parts[0].text;
-    
-    const parsedData = JSON.parse(resultText);
-    
-    // Gắn thêm raw_input
-    parsedData.raw_input = input;
-
-    return NextResponse.json(parsedData);
-  } catch (error: any) {
-    console.error('Error parsing booking with AI:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const services = await activeServices();
+    const result =
+      (await parseWithGemini(parsedRequest.data.input, services)) ??
+      parseBookingRequest(parsedRequest.data.input, services);
+    return json(result);
+  } catch (error) {
+    console.error('[ai-booking]', error);
+    return json({ error: 'Không thể phân tích yêu cầu lúc này.' }, 500);
   }
 }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { AlertTriangle, ArrowLeft, BellRing, Calendar, CalendarClock, Clock, Gift, History, Mail, MessageCircle, Phone, Sparkles, StickyNote, User, UserCircle, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Calendar, CalendarClock, Clock, Gift, History, Mail, Phone, Sparkles, StickyNote, User, UserCircle, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import {
@@ -20,8 +20,6 @@ import { PageLoader } from '@/components/page-loader';
 import { StatusActions } from '@/components/status-actions';
 import { StatusBadge } from '@/components/status-badge';
 import { cn } from '@/lib/utils';
-import { zaloHref } from '@/lib/site-config';
-import { reminderText } from '@/components/admin/reminder-queue';
 import { discountLabel } from '@/components/booking/booking-summary';
 import { RescheduleDialog } from '@/components/reschedule-dialog';
 
@@ -100,18 +98,6 @@ export default function AppointmentDetailPage() {
   ];
   const isUpcoming = ['pending', 'confirmed'].includes(appointment.status) && start.getTime() > Date.now();
 
-  const remind = async () => {
-    try {
-      await navigator.clipboard.writeText(reminderText(appointment));
-      toast.success('Đã sao chép tin nhắc — dán vào Zalo');
-    } catch {
-      toast.message(reminderText(appointment));
-    }
-    window.open(zaloHref(c?.phone || ''), '_blank', 'noopener');
-    await supabase.from('appointments').update({ reminded_at: new Date().toISOString() }).eq('id', id);
-    load();
-  };
-
   return (
     <div className="max-w-5xl space-y-6">
       <RescheduleDialog
@@ -169,7 +155,6 @@ export default function AppointmentDetailPage() {
             )}
             <p className="text-xs text-muted-foreground">
               {appointment.source === 'front_desk' ? 'Lễ tân đặt hộ' : 'Khách tự đặt online'}
-              {appointment.reminded_at && ` · Đã nhắc lịch lúc ${dm(appointment.reminded_at)}`}
             </p>
             {noShows > 0 && (
               <p className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -249,12 +234,6 @@ export default function AppointmentDetailPage() {
               {isUpcoming && (
                 <Button size="sm" variant="outline" onClick={() => setMoving(true)}>
                   <CalendarClock className="mr-1.5 h-3.5 w-3.5" /> Đổi giờ
-                </Button>
-              )}
-              {c?.phone && isUpcoming && (
-                <Button size="sm" variant="outline" onClick={remind}>
-                  {appointment.reminded_at ? <BellRing className="mr-1.5 h-3.5 w-3.5" /> : <MessageCircle className="mr-1.5 h-3.5 w-3.5" />}
-                  {appointment.reminded_at ? 'Nhắc lại qua Zalo' : 'Nhắc lịch qua Zalo'}
                 </Button>
               )}
               {c?.email && (

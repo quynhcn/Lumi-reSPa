@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Calendar, MapPin, MessageCircle, Phone } from 'lucide-react';
+import { Calendar, MapPin, Phone } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { SITE } from '@/lib/site-config';
 
@@ -160,23 +160,6 @@ export function SiteFooter() {
                 </div>
               </a>
 
-              {/* Zalo item */}
-              <a
-                href={SITE.zalo}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center gap-3 text-left transition-colors"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[#E5C290] transition-colors group-hover:border-[#E5C290]/50 group-hover:bg-[#E5C290]/10">
-                  <MessageCircle className="h-4 w-4" />
-                </span>
-                <div>
-                  <span className="block text-[11px] uppercase tracking-wider text-[#A8988A]">Zalo</span>
-                  <span className="block text-sm text-[#EAE0D5] transition-colors group-hover:text-[#F3D7AC]">
-                    Chat với chúng tôi
-                  </span>
-                </div>
-              </a>
 
               {/* Chỉ đường item */}
               <a

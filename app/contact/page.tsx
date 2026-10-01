@@ -12,7 +12,6 @@ import {
   Flower2,
   Heart,
   MapPin,
-  MessageCircle,
   PhoneCall,
 } from 'lucide-react';
 import { SITE, telHref } from '@/lib/site-config';
@@ -32,7 +31,7 @@ const FAQS = [
   },
   {
     q: 'Nếu có việc bận đột xuất, tôi có thể đổi lịch hoặc hủy không?',
-    a: 'Hoàn toàn được. Bạn có thể đổi giờ hoặc hủy lịch hẹn trước tối thiểu 2 giờ mà không mất bất kỳ khoản phí nào qua hotline, Zalo hoặc trực tiếp trên website.',
+    a: 'Hoàn toàn được. Bạn có thể đổi giờ hoặc hủy lịch hẹn trước tối thiểu 2 giờ mà không mất bất kỳ khoản phí nào qua hotline hoặc trực tiếp trên website.',
   },
   {
     q: 'Spa có phòng đôi riêng cho cặp đôi hoặc mẹ con không?',
@@ -112,15 +111,6 @@ export default function ContactPage() {
                   <span>Đặt lịch ngay</span>
                   <ArrowRight className="h-4 w-4" />
                 </Link>
-                <a
-                  href={SITE.zalo}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-[#8D381B]/40 bg-transparent px-7 py-3.5 text-sm font-semibold text-[#20140D] transition-all hover:bg-black/5 hover:border-[#8D381B] hover:text-[#8D381B]"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  <span>Nhắn Zalo</span>
-                </a>
               </div>
 
               {/* Bottom Quick Info Row */}
@@ -273,7 +263,7 @@ export default function ContactPage() {
                   Đặt lịch tư vấn miễn phí
                 </h2>
                 <p className="mt-3 text-[13.5px] leading-relaxed text-[#6B5E55] max-w-[420px]">
-                  Chuyên viên tư vấn của Lumière Spa sẽ liên hệ với bạn qua điện thoại hoặc Zalo để phản hồi chi tiết và giúp bạn lựa chọn liệu trình phù hợp nhất.
+                  Chuyên viên tư vấn của Lumière Spa sẽ liên hệ qua điện thoại để phản hồi chi tiết và giúp bạn lựa chọn liệu trình phù hợp nhất.
                 </p>
               </div>
 

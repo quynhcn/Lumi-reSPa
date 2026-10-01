@@ -83,7 +83,7 @@ const SLIDES: SlideData[] = [
   },
 ];
 
-export function HeroCarousel({ offerPct = 10 }: { offerPct?: number }) {
+export function HeroCarousel({ offerPct = 0 }: { offerPct?: number }) {
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -105,7 +105,7 @@ export function HeroCarousel({ offerPct = 10 }: { offerPct?: number }) {
   };
 
   const activeSlide = SLIDES[current];
-  const promo = offerPct > 0 ? `Giảm ${offerPct}% cho lần đặt online đầu tiên, tự động áp dụng.` : activeSlide.promoText;
+  const promo = offerPct > 0 ? `Giảm ${offerPct}% cho lần đặt online đầu tiên, tự động áp dụng.` : '';
 
   return (
     <section

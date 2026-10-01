@@ -13,7 +13,6 @@ import {
   Heart,
   Leaf,
   MapPin,
-  MessageCircle,
   Navigation,
   Percent,
   Phone,
@@ -532,15 +531,6 @@ export default function OffersPage() {
                 >
                   <PhoneCall className="h-4 w-4" />
                   <span>Gọi {SITE.phone}</span>
-                </a>
-                <a
-                  href={SITE.zalo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 rounded-xl border border-[#D9C4B2] bg-[#FDFBF7] px-4 py-3.5 text-xs sm:text-sm font-semibold text-[#8D381B] transition-all hover:bg-[#F5ECE1] hover:border-[#8D381B]/40 active:scale-[0.99]"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  <span>Chat Zalo</span>
                 </a>
                 <a
                   href={SITE.mapUrl}
