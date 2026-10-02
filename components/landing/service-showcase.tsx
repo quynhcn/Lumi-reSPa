@@ -142,7 +142,7 @@ export function ServiceShowcase({ services }: { services?: Service[] }) {
   return (
     <section
       id="dich-vu"
-      className="relative scroll-mt-20 overflow-hidden bg-[#FAF6F0] py-20 lg:py-28 select-none"
+      className="relative scroll-mt-20 overflow-hidden bg-[#FAF6F0] py-10 lg:py-14 select-none"
     >
       {/* Top Left: Sunlit Palm Frond Shadow */}
       <div className="pointer-events-none absolute -left-12 -top-12 h-96 w-96 opacity-15">

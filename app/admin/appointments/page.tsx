@@ -8,6 +8,7 @@ import { ClipboardList, Search, Loader2, Plus } from 'lucide-react';
 import { AppointmentRow } from '@/components/appointment-row';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/ui/pagination';
 
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: 'all', label: 'Tất cả' },
@@ -35,45 +36,72 @@ export default function AppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [range, setRange] = useState<RangeValue>('upcoming');
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const from = new Date();
-      from.setHours(0, 0, 0, 0);
-      from.setDate(from.getDate() - RANGE_FILTERS.find((r) => r.value === range)!.days);
-      const { data } = await supabase
-        .from('appointments')
-        .select(`
-          *,
-          customers (name, phone, email),
-          staff (name, avatar_url),
-          services (name, duration_min, price, category)
-        `)
-        .gte('start_time', from.toISOString())
-        .order('start_time', { ascending: range === 'upcoming' })
-        .limit(PAGE_LIMIT);
-      setAppointments((data || []) as unknown as AppointmentWithDetails[]);
-      setLoading(false);
-    })();
-  }, [range]);
+  const PAGE_SIZE = 20;
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const filtered = appointments.filter((apt) => {
-    if (statusFilter !== 'all' && apt.status !== statusFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        apt.customers?.name?.toLowerCase().includes(q) ||
-        apt.staff?.name?.toLowerCase().includes(q) ||
-        apt.services?.name?.toLowerCase().includes(q) ||
-        apt.booking_code?.toLowerCase().includes(q) ||
-        apt.customers?.phone?.includes(q)
-      );
+  const loadData = async (p: number, q: string, status: string, r: RangeValue) => {
+    setLoading(true);
+    const from = new Date();
+    from.setHours(0, 0, 0, 0);
+    from.setDate(from.getDate() - RANGE_FILTERS.find((x) => x.value === r)!.days);
+
+    let query: any = supabase
+      .from('appointments')
+      .select(`
+        *,
+        customers (name, phone, email),
+        staff (name, avatar_url),
+        services (name, duration_min, price, category)
+      `, { count: 'exact' })
+      .gte('start_time', from.toISOString());
+
+    if (status !== 'all') {
+      query = query.eq('status', status);
     }
-    return true;
-  });
+
+    if (q.trim()) {
+      const qs = q.trim();
+      // Two-step search to avoid .or() across relations
+      const [c, s, svc] = await Promise.all([
+        supabase.from('customers').select('id').or(`name.ilike.%${qs}%,phone.ilike.%${qs}%`),
+        supabase.from('staff').select('id').ilike('name', `%${qs}%`),
+        supabase.from('services').select('id').ilike('name', `%${qs}%`)
+      ]);
+      const custIds = (c.data || []).map((x: any) => x.id);
+      const staffIds = (s.data || []).map((x: any) => x.id);
+      const svcIds = (svc.data || []).map((x: any) => x.id);
+
+      const parts = [`booking_code.ilike.%${qs}%`];
+      if (custIds.length) parts.push(`customer_id.in.(${custIds.join(',')})`);
+      if (staffIds.length) parts.push(`staff_id.in.(${staffIds.join(',')})`);
+      if (svcIds.length) parts.push(`service_id.in.(${svcIds.join(',')})`);
+      query = query.or(parts.join(','));
+    }
+
+    const { data, count, error } = await query
+      .order('start_time', { ascending: r === 'upcoming' })
+      .range((p - 1) * PAGE_SIZE, p * PAGE_SIZE - 1);
+
+    if (count !== null) setTotal(count);
+    setAppointments((data || []) as unknown as AppointmentWithDetails[]);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (page !== 1) setPage(1);
+      else loadData(1, search, statusFilter, range);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search, statusFilter, range]);
+
+  useEffect(() => {
+    loadData(page, search, statusFilter, range);
+  }, [page]);
 
   const groupedByDate: Record<string, AppointmentWithDetails[]> = {};
-  filtered.forEach((apt) => {
+  appointments.forEach((apt) => {
     const dateKey = new Date(apt.start_time).toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' });
     if (!groupedByDate[dateKey]) groupedByDate[dateKey] = [];
     groupedByDate[dateKey].push(apt);
@@ -84,7 +112,7 @@ export default function AppointmentsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="page-title">Lịch hẹn</h1>
-          <p className="text-sm text-muted-foreground mt-1">{filtered.length} lịch hẹn</p>
+          <p className="text-sm text-muted-foreground mt-1">{total} lịch hẹn</p>
         </div>
         <Button asChild>
           <Link href="/booking">
@@ -131,7 +159,7 @@ export default function AppointmentsPage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : appointments.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <ClipboardList className="h-12 w-12 mx-auto mb-3 opacity-30" />
           <p>Không tìm thấy lịch hẹn nào</p>
@@ -158,6 +186,13 @@ export default function AppointmentsPage() {
               </div>
             </div>
           ))}
+          <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden mt-6">
+            <Pagination
+              page={page}
+              totalPages={Math.ceil(total / PAGE_SIZE)}
+              onChange={setPage}
+            />
+          </div>
         </div>
       )}
     </div>

@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PageLoader } from '@/components/page-loader';
+import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 
 const EMPTY_PKG = { name: '', service_id: '', sessions: 5, price: 0, is_active: true };
@@ -45,12 +46,15 @@ export default function PromotionsPage() {
   const [cardOpen, setCardOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const PAGE_SIZE = 15;
+  const [cardPage, setCardPage] = useState(1);
+  const [cardTotal, setCardTotal] = useState(0);
+
   const load = useCallback(async () => {
-    const [st, sv, pk, gc] = await Promise.all([
+    const [st, sv, pk] = await Promise.all([
       fetch('/api/settings').then((r) => (r.ok ? r.json() : null)).catch(() => null),
       supabase.from('services').select('*').order('name'),
       supabase.from('service_packages').select('*, services (name, price, duration_min)').order('created_at').then((r) => r.data || []),
-      supabase.from('gift_cards').select('*, services (name)').order('created_at', { ascending: false }).limit(500).then((r) => r.data || []),
     ]);
     if (st) {
       setSettings(st as AppSettings);
@@ -59,13 +63,46 @@ export default function PromotionsPage() {
     }
     setServices((sv.data || []) as Service[]);
     setPackages((pk || []) as ServicePackage[]);
-    setCards((gc || []) as GiftCard[]);
     setLoading(false);
+  }, []);
+
+  const loadCards = useCallback(async (p: number, q: string, kind: 'sold' | 'percent') => {
+    let query: any = supabase.from('gift_cards').select('*, services (name)', { count: 'exact' });
+    
+    if (kind === 'percent') {
+      query = query.eq('kind', 'percent');
+    } else {
+      query = query.neq('kind', 'percent');
+    }
+    
+    if (q.trim()) {
+      const qs = q.trim();
+      query = query.or(`code.ilike.%${qs}%,recipient_name.ilike.%${qs}%,recipient_phone.ilike.%${qs}%,buyer_name.ilike.%${qs}%`);
+    }
+
+    const { data, count } = await query
+      .order('created_at', { ascending: false })
+      .range((p - 1) * PAGE_SIZE, p * PAGE_SIZE - 1);
+
+    if (count !== null) setCardTotal(count);
+    setCards((data || []) as GiftCard[]);
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (cardPage !== 1) setCardPage(1);
+      else loadCards(1, search, cardKind);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search, cardKind]);
+
+  useEffect(() => {
+    loadCards(cardPage, search, cardKind);
+  }, [cardPage, loadCards]);
 
   // ── First visit ──
   const saveSettings = async (patch: Partial<AppSettings>) => {
@@ -160,7 +197,7 @@ export default function PromotionsPage() {
       /* ignore */
     }
     setCardOpen(false);
-    load();
+    loadCards(cardPage, search, cardKind);
   };
 
   const toggleCard = async (c: GiftCard, is_active: boolean) => {
@@ -178,14 +215,7 @@ export default function PromotionsPage() {
     }
   };
 
-  const shownCards = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const ofKind = cards.filter((c) => (cardKind === 'percent') === (c.kind === 'percent'));
-    if (!q) return ofKind;
-    return ofKind.filter((c) =>
-      [c.code, c.recipient_name, c.recipient_phone, c.buyer_name].some((v) => v?.toLowerCase().includes(q))
-    );
-  }, [cards, search, cardKind]);
+
 
   if (loading) return <PageLoader fullScreen={false} />;
 
@@ -370,7 +400,7 @@ export default function PromotionsPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm mã, tên, SĐT…" className="pl-10" />
         </div>
-        {shownCards.length === 0 ? (
+        {cards.length === 0 ? (
           <p className="text-sm text-muted-foreground">Chưa có thẻ nào.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -386,7 +416,7 @@ export default function PromotionsPage() {
                 </tr>
               </thead>
               <tbody>
-                {shownCards.map((c) => {
+                {cards.map((c) => {
                   const expired = c.expires_at && c.expires_at < toDateKey();
                   return (
                     <tr key={c.id} className={cn('border-b border-border last:border-0', (!c.is_active || expired) && 'opacity-60')}>
@@ -425,6 +455,15 @@ export default function PromotionsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {cards.length > 0 && (
+          <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden mt-4">
+            <Pagination
+              page={cardPage}
+              totalPages={Math.ceil(cardTotal / PAGE_SIZE)}
+              onChange={setCardPage}
+            />
           </div>
         )}
       </section>

@@ -15,6 +15,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,16 +55,40 @@ export default function StaffPage() {
   const EMPTY_FORM = { name: '', phone: '', email: '', role: 'therapist', is_active: true, bio: '', specialties: '', years_experience: '', avatar_url: '' };
   const [form, setForm] = useState(EMPTY_FORM);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const loadData = async () => {
-    const [{ data: staffData }, { data: svcData }, { data: ssData }] = await Promise.all([
-      supabase.from('staff').select('*').order('name'),
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (page !== 1) setPage(1);
+      else loadData(1, search);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    loadData(page, search);
+  }, [page]);
+
+  const loadData = async (p: number, q: string) => {
+    setLoading(true);
+    let query: any = supabase.from('staff').select('*', { count: 'exact' });
+    if (q.trim()) {
+      query = query.or(`name.ilike.%${q.trim()}%,phone.ilike.%${q.trim()}%,email.ilike.%${q.trim()}%`);
+    }
+
+    const [
+      { data: staffData, count },
+      { data: svcData },
+      { data: ssData },
+    ] = await Promise.all([
+      query.order('name').range((p - 1) * PAGE_SIZE, p * PAGE_SIZE - 1),
       supabase.from('services').select('*').order('name'),
       supabase.from('staff_services').select('*'),
     ]);
+
+    if (count !== null) setTotal(count);
     setStaffList(staffData || []);
     setServices(svcData || []);
     const map: Record<string, string[]> = {};
@@ -124,7 +149,7 @@ export default function StaffPage() {
     }
     toast.success(editingStaff ? 'Đã cập nhật nhân viên' : 'Đã thêm nhân viên mới');
     setDialogOpen(false);
-    loadData();
+    loadData(page, search);
   };
 
   const handleDelete = async () => {
@@ -139,7 +164,7 @@ export default function StaffPage() {
     }
     else {
       toast.success('Đã xóa nhân viên');
-      loadData();
+      loadData(page, search);
     }
     setDeleteId(null);
   };
@@ -149,7 +174,7 @@ export default function StaffPage() {
     const { error } = await supabase.from('staff').update({ is_active }).eq('id', staff.id);
     if (error) {
       toast.error('Không thể cập nhật');
-      loadData();
+      loadData(page, search);
     } else {
       toast.success(is_active ? `${staff.name} đã nhận lịch trở lại` : `${staff.name} tạm ngừng nhận lịch`);
     }
@@ -166,21 +191,17 @@ export default function StaffPage() {
         .eq('service_id', serviceId);
       if (error) toast.error('Không thể bỏ gán dịch vụ');
     }
-    loadData();
+    loadData(page, search);
   };
 
-  const filtered = staffList.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.phone?.includes(search) ||
-    s.email?.toLowerCase().includes(search.toLowerCase())
-  );
+
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="page-title">Nhân viên</h1>
-          <p className="text-sm text-muted-foreground mt-1">{staffList.length} nhân viên</p>
+          <p className="text-sm text-muted-foreground mt-1">{total} nhân viên</p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4 mr-1" />
@@ -203,9 +224,10 @@ export default function StaffPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="grid lg:grid-cols-2 gap-4">
-          {filtered.map((staff) => (
-            <div key={staff.id} className={cn('card-base p-5 transition-opacity', !staff.is_active && 'opacity-60')}>
+        <div className="space-y-4">
+          <div className="grid lg:grid-cols-2 gap-4">
+            {staffList.map((staff) => (
+              <div key={staff.id} className={cn('card-base p-5 transition-opacity', !staff.is_active && 'opacity-60')}>
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-lg">
@@ -281,6 +303,14 @@ export default function StaffPage() {
               </label>
             </div>
           ))}
+          </div>
+          <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+            <Pagination
+              page={page}
+              totalPages={Math.ceil(total / PAGE_SIZE)}
+              onChange={setPage}
+            />
+          </div>
         </div>
       )}
 

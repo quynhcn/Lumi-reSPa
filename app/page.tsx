@@ -208,7 +208,7 @@ export default async function HomePage() {
       </section>
 
       {/* Intro / Welcome Teaser matching mockup */}
-      <section id="ve-chung-toi" className="relative scroll-mt-14 overflow-hidden bg-[#FAF6F0] py-20 lg:py-28">
+      <section id="ve-chung-toi" className="relative scroll-mt-14 overflow-hidden bg-[#FAF6F0] pt-20 lg:pt-28 pb-10 lg:pb-14">
         {/* Soft sun-dappled foliage shadow effect in top-left corner */}
         <div className="pointer-events-none absolute -left-16 -top-16 h-80 w-80 rounded-full bg-[#EBDDCF]/60 blur-3xl" />
         
@@ -370,7 +370,7 @@ export default async function HomePage() {
       <ServiceShowcase services={services} />
 
       {/* Offers: first visit · gift cards · membership */}
-      <section id="uu-dai" className="relative scroll-mt-20 overflow-hidden bg-[#FAF6F0] py-20 lg:py-28">
+      <section id="uu-dai" className="relative scroll-mt-20 overflow-hidden bg-[#FAF6F0] pt-10 lg:pt-14 pb-20 lg:pb-28">
         {/* Soft background foliage ambiance */}
         <div className="pointer-events-none absolute -left-20 top-1/3 h-96 w-96 rounded-full bg-[#EFE3D5]/50 blur-3xl" />
         <div className="pointer-events-none absolute -right-20 bottom-10 h-96 w-96 rounded-full bg-[#EBDDCF]/50 blur-3xl" />

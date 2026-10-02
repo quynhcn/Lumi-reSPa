@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   X,
 } from 'lucide-react';
+import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,12 +68,35 @@ export default function ServicesPage() {
     compare_at_price: '',
   });
 
-  useEffect(() => {
-    loadServices();
-  }, []);
+  const PAGE_SIZE = 12;
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const loadServices = async () => {
-    const { data } = await supabase.from('services').select('*').order('category', { ascending: true }).order('name');
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (page !== 1) setPage(1);
+      else loadServices(1, search);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    loadServices(page, search);
+  }, [page]);
+
+  const loadServices = async (p: number, q: string) => {
+    setLoading(true);
+    let query: any = supabase.from('services').select('*', { count: 'exact' });
+    if (q.trim()) {
+      query = query.ilike('name', `%${q.trim()}%`);
+    }
+
+    const { data, count } = await query
+      .order('category', { ascending: true })
+      .order('name')
+      .range((p - 1) * PAGE_SIZE, p * PAGE_SIZE - 1);
+      
+    if (count !== null) setTotal(count);
     setServices(data || []);
     setLoading(false);
   };
@@ -160,7 +184,7 @@ export default function ServicesPage() {
     }
     toast.success(editingService ? 'Đã cập nhật dịch vụ' : 'Đã tạo dịch vụ mới');
     setDialogOpen(false);
-    loadServices();
+    loadServices(page, search);
   };
 
   const toggleActive = async (svc: Service, is_active: boolean) => {
@@ -168,7 +192,7 @@ export default function ServicesPage() {
     const { error } = await supabase.from('services').update({ is_active }).eq('id', svc.id);
     if (error) {
       toast.error('Không thể cập nhật');
-      loadServices();
+      loadServices(page, search);
     } else {
       toast.success(is_active ? `Đã hiện "${svc.name}"` : `Đã ẩn "${svc.name}" khỏi trang đặt lịch`);
     }
@@ -186,22 +210,17 @@ export default function ServicesPage() {
     }
     else {
       toast.success('Đã xóa dịch vụ');
-      loadServices();
+      loadServices(page, search);
     }
     setDeleteId(null);
   };
-
-  const filtered = services.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    categoryLabel(s.category).toLowerCase().includes(search.toLowerCase())
-  );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="page-title">Dịch vụ</h1>
-          <p className="text-sm text-muted-foreground mt-1">{services.length} dịch vụ</p>
+          <p className="text-sm text-muted-foreground mt-1">{total} dịch vụ</p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4 mr-1" />
@@ -224,9 +243,10 @@ export default function ServicesPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map((svc) => (
-            <div key={svc.id} className={cn('card-base flex flex-col overflow-hidden transition-opacity group', !svc.is_active && 'opacity-60')}>
+        <div className="space-y-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {services.map((svc) => (
+              <div key={svc.id} className={cn('card-base flex flex-col overflow-hidden transition-opacity group', !svc.is_active && 'opacity-60')}>
               <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
                 {svc.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -292,6 +312,14 @@ export default function ServicesPage() {
               </div>
             </div>
           ))}
+          </div>
+          <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+            <Pagination
+              page={page}
+              totalPages={Math.ceil(total / PAGE_SIZE)}
+              onChange={setPage}
+            />
+          </div>
         </div>
       )}
 

@@ -47,7 +47,7 @@ export default function ContactPage() {
       <SiteHeader />
 
       {/* Hero Header matching Image 1 */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#FAF6F0] to-[#F3E9DD] pt-12 pb-24 sm:pt-16 sm:pb-32 lg:pt-20 lg:pb-40">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#FAF6F0] to-[#F3E9DD] pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-20 lg:pb-24">
         {/* Left Botanical Flourish */}
         <div className="pointer-events-none absolute -left-6 top-[20%] opacity-40 hidden md:block">
           <svg width="220" height="380" viewBox="0 0 220 380" fill="none" stroke="#CBB49C" strokeWidth="1.2">
@@ -87,7 +87,7 @@ export default function ContactPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-14 lg:gap-8 items-center">
             
             {/* Left Content */}
-            <div className="lg:col-span-6 xl:col-span-5 pt-4">
+            <div className="lg:col-span-6 xl:col-span-6 pt-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-[#D5C2B0] bg-[#F7F0E6]/90 px-3.5 py-1 text-[11px] sm:text-xs font-semibold tracking-wider text-[#8D381B] mb-5 shadow-sm">
                 <Compass className="h-3.5 w-3.5" />
                 <span>LIÊN HỆ &amp; ĐẶT HẸN · LUMIÈRE SPA</span>
@@ -114,7 +114,7 @@ export default function ContactPage() {
               </div>
 
               {/* Bottom Quick Info Row */}
-              <div className="mt-12 flex flex-wrap items-center gap-4 sm:gap-6 pt-5 border-t border-[#E5D7C7]/60">
+              <div className="mt-12 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-2 lg:gap-4 pt-5 border-t border-[#E5D7C7]/60 w-full">
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F5ECE1] text-[#8D381B]">
                     <Clock className="h-4 w-4" />
@@ -131,24 +131,24 @@ export default function ContactPage() {
                   </span>
                   <div>
                     <strong className="block text-xs font-semibold text-[#20140D]">Hỗ trợ nhanh</strong>
-                    <span className="mt-0.5 block text-[11px] text-[#6B5E55]">Tư vấn tận tâm, phản hồi trong 5 phút</span>
+                    <span className="mt-0.5 block text-[11px] text-[#6B5E55]">Phản hồi trong 5 phút</span>
                   </div>
                 </div>
-                <div className="hidden h-9 w-px bg-[#E5D7C7] lg:block xl:hidden" />
+                <div className="hidden h-9 w-px bg-[#E5D7C7] sm:block" />
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F5ECE1] text-[#8D381B]">
                     <Car className="h-4 w-4" />
                   </span>
                   <div>
                     <strong className="block text-xs font-semibold text-[#20140D]">Chỗ đỗ xe</strong>
-                    <span className="mt-0.5 block text-[11px] text-[#6B5E55]">An toàn, miễn phí tại spa</span>
+                    <span className="mt-0.5 block text-[11px] text-[#6B5E55]">Miễn phí tại spa</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Right Arch Visual matching Image 1 */}
-            <div className="relative lg:col-span-6 xl:col-span-7 flex justify-end">
+            <div className="relative lg:col-span-6 xl:col-span-6 flex justify-end">
               <div className="relative w-full max-w-[440px] xl:max-w-[500px]">
                 
                 {/* Floating handwritten script */}
@@ -229,7 +229,7 @@ export default function ContactPage() {
       </section>
 
       {/* Main Form & Location Section matching Image 2 */}
-      <section className="relative overflow-hidden bg-[#FAF7F2] py-16 lg:py-24">
+      <section className="relative overflow-hidden bg-[#FAF7F2] py-10 lg:py-16">
         {/* Background botanical corners */}
         <div className="pointer-events-none absolute left-0 top-0 opacity-40 mix-blend-multiply hidden sm:block">
           {/* Using a subtle decorative svg for corner */}
@@ -374,7 +374,7 @@ export default function ContactPage() {
       </section>
 
       {/* FAQ Accordion Section */}
-      <section className="mx-auto max-w-[1240px] px-6 py-16 lg:py-20">
+      <section className="mx-auto max-w-[1240px] px-6 py-10 lg:py-16">
         <div className="max-w-2xl mx-auto text-center mb-10">
           <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-[#9B3E1F]">
             GIẢI ĐÁP THẮC MẮC

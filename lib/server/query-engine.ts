@@ -112,6 +112,12 @@ async function allowedColumns(client: PoolClient, table: string, rule: { columns
 }
 
 function filterSql(f: Filter, alias: string, cols: Set<string>, sql: Sql): string {
+  if (f.op === 'or') {
+    const subs = f.value as Filter[];
+    if (!subs.length) return 'false';
+    const exprs = subs.map((sub) => filterSql(sub, alias, cols, sql));
+    return `(${exprs.join(' OR ')})`;
+  }
   if (!cols.has(f.column)) throw new QueryError(`Unknown or forbidden column: ${f.column}`);
   const col = `${alias}.${q(f.column)}`;
   let expr: string;
@@ -278,14 +284,15 @@ async function runSelect(client: PoolClient, actor: Actor, spec: QuerySpec): Pro
     const nulls = o.nullsFirst === undefined ? '' : o.nullsFirst ? ' NULLS FIRST' : ' NULLS LAST';
     return `${t}.${q(o.column)} ${o.ascending ? 'ASC' : 'DESC'}${nulls}`;
   });
-  const limit = Math.min(Math.max(1, Math.floor(spec.limit ?? MAX_ROWS)), MAX_ROWS);
+  const limit = spec.limit !== undefined ? Math.min(Math.max(1, Math.floor(spec.limit)), MAX_ROWS) : MAX_ROWS;
+  const offset = spec.offset ? Math.max(0, Math.floor(spec.offset)) : 0;
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const text = `SELECT coalesce(jsonb_agg(x.j ORDER BY x.n), '[]'::jsonb) AS rows FROM (
       SELECT ${obj} AS j, row_number() OVER (${order.length ? 'ORDER BY ' + order.join(', ') : ''}) AS n
       FROM public.${q(table)} ${t} ${whereSql}
       ${order.length ? 'ORDER BY ' + order.join(', ') : ''}
-      LIMIT ${limit}
+      LIMIT ${limit} OFFSET ${offset}
     ) x`;
   const { rows } = await client.query(text, sql.params);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { MessageSquareQuote, Star } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,6 +9,7 @@ import type { Review } from '@/lib/types';
 import { Switch } from '@/components/ui/switch';
 import { PageLoader } from '@/components/page-loader';
 import { StatCard } from '@/components/stat-card';
+import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 
 type Row = Review & {
@@ -22,17 +23,32 @@ export default function ReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'low'>('all');
 
-  useEffect(() => {
-    supabase
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const load = useCallback(async (p: number, f: 'all' | 'low') => {
+    setLoading(true);
+    let q: any = supabase
       .from('reviews')
-      .select('*, customers (id, name), services (name), staff (name)')
+      .select('*, customers (id, name), services (name), staff (name)', { count: 'exact' });
+
+    if (f === 'low') {
+      q = q.lte('rating', 3);
+    }
+
+    const { data, count } = await q
       .order('created_at', { ascending: false })
-      .limit(500)
-      .then(({ data }) => {
-        setRows((data || []) as unknown as Row[]);
-        setLoading(false);
-      });
+      .range((p - 1) * PAGE_SIZE, p * PAGE_SIZE - 1);
+
+    setRows((data || []) as unknown as Row[]);
+    if (count !== null) setTotal(count);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    load(page, filter);
+  }, [load, page, filter]);
 
   const togglePublish = async (r: Row, is_published: boolean) => {
     setRows((prev) => prev.map((x) => (x.id === r.id ? { ...x, is_published } : x)));
@@ -45,7 +61,6 @@ export default function ReviewsPage() {
 
   const published = rows.filter((r) => r.is_published);
   const avg = published.length ? published.reduce((s, r) => s + r.rating, 0) / published.length : 0;
-  const shown = filter === 'low' ? rows.filter((r) => r.rating <= 3) : rows;
 
   return (
     <div className="space-y-5">
@@ -57,15 +72,18 @@ export default function ReviewsPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-        <StatCard icon={Star} label="Điểm trung bình (đang hiển thị)" value={avg ? avg.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) : '—'} />
-        <StatCard icon={MessageSquareQuote} label="Tổng đánh giá" value={rows.length} hint={`${rows.filter((r) => r.rating <= 3).length} đánh giá ≤ 3 sao`} />
+        <StatCard icon={Star} label="Trung bình (trên trang này)" value={avg ? avg.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) : '—'} />
+        <StatCard icon={MessageSquareQuote} label="Tổng đánh giá" value={total} />
       </div>
 
       <div className="flex gap-2">
         {(['all', 'low'] as const).map((f) => (
           <button
             key={f}
-            onClick={() => setFilter(f)}
+            onClick={() => {
+              setPage(1);
+              setFilter(f);
+            }}
             aria-pressed={filter === f}
             className={cn(
               'rounded-full border px-3 py-1.5 text-sm font-medium',
@@ -77,11 +95,11 @@ export default function ReviewsPage() {
         ))}
       </div>
 
-      {shown.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="card-base py-12 text-center text-muted-foreground">Chưa có đánh giá nào.</p>
       ) : (
         <div className="space-y-3">
-          {shown.map((r) => (
+          {rows.map((r) => (
             <article key={r.id} className={cn('card-base p-4 sm:p-5', !r.is_published && 'opacity-60')}>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span className="flex" aria-label={`${r.rating} sao`}>
@@ -110,6 +128,13 @@ export default function ReviewsPage() {
               )}
             </article>
           ))}
+          <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden mt-4">
+            <Pagination
+              page={page}
+              totalPages={Math.ceil(total / PAGE_SIZE)}
+              onChange={setPage}
+            />
+          </div>
         </div>
       )}
     </div>

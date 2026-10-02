@@ -9,7 +9,7 @@
  * File này không được import gì từ server (pg, next/headers) vì nó chạy cả ở trình duyệt.
  */
 
-export type FilterOp = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'is' | 'like' | 'ilike';
+export type FilterOp = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'is' | 'like' | 'ilike' | 'or';
 export type Filter = { column: string; op: FilterOp; value: unknown; negate?: boolean };
 export type OrderSpec = { column: string; ascending: boolean; nullsFirst?: boolean };
 
@@ -24,6 +24,7 @@ export interface QuerySpec {
   filters: Filter[];
   order: OrderSpec[];
   limit?: number;
+  offset?: number;
   values?: Record<string, unknown> | Record<string, unknown>[];
   single?: 'single' | 'maybe';
 }
@@ -114,6 +115,22 @@ export class QueryBuilder<Row = any, T = Row[]> implements PromiseLike<DbResult<
     Object.entries(obj).forEach(([k, v]) => this.f(k, 'eq', v));
     return this;
   }
+  or(clause: string) {
+    const parts = clause.split(',');
+    const subFilters: Filter[] = [];
+    for (const p of parts) {
+      const match = p.match(/^(.*?)\.(eq|neq|gt|gte|lt|lte|in|is|like|ilike)\.(.*)$/);
+      if (match) {
+        let val: unknown = match[3];
+        if (match[2] === 'in') {
+          val = val === '()' ? [] : parseList(val);
+        }
+        subFilters.push({ column: match[1], op: match[2] as FilterOp, value: val });
+      }
+    }
+    this.spec.filters.push({ column: '', op: 'or', value: subFilters });
+    return this;
+  }
 
   // ── modifiers ──
   order(column: string, opts?: { ascending?: boolean; nullsFirst?: boolean }) {
@@ -122,6 +139,11 @@ export class QueryBuilder<Row = any, T = Row[]> implements PromiseLike<DbResult<
   }
   limit(n: number) {
     this.spec.limit = n;
+    return this;
+  }
+  range(from: number, to: number) {
+    this.spec.offset = from;
+    this.spec.limit = to - from + 1;
     return this;
   }
   single(): QueryBuilder<Row, Row> {

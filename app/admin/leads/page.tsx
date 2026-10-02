@@ -10,6 +10,7 @@ import { telHref } from '@/lib/site-config';
 import { LEAD_STATUS_LABELS, type Lead, type LeadStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PageLoader } from '@/components/page-loader';
+import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 
 const FILTERS: { value: LeadStatus | 'open' | 'all'; label: string }[] = [
@@ -41,23 +42,33 @@ export default function LeadsPage() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['value']>('open');
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  const PAGE_SIZE = 15;
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const load = useCallback(async (p: number, f: string) => {
+    setLoading(true);
     let list: Lead[] = [];
     try {
-      let q = supabase.from('leads').select('*').order('created_at', { ascending: false }).limit(300);
-      if (filter === 'open') q = q.in('status', ['new', 'contacted']);
-      else if (filter !== 'all') q = q.eq('status', filter);
-      const { data, error } = await q;
+      let q: any = supabase.from('leads').select('*', { count: 'exact' });
+      if (f === 'open') q = q.in('status', ['new', 'contacted']);
+      else if (f !== 'all') q = q.eq('status', f);
+      
+      const { data, count, error } = await q
+        .order('created_at', { ascending: false })
+        .range((p - 1) * PAGE_SIZE, p * PAGE_SIZE - 1);
+        
       if (!error && data) list = data as Lead[];
+      if (count !== null) setTotal(count);
     } catch {}
 
     setLeads(list);
     setLoading(false);
-  }, [filter]);
+  }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    load(page, filter);
+  }, [load, page, filter]);
 
   const setStatus = async (lead: Lead, status: LeadStatus) => {
     const { error } = await supabase
@@ -69,7 +80,7 @@ export default function LeadsPage() {
       return;
     }
     toast.success(`Đã chuyển sang “${LEAD_STATUS_LABELS[status]}”`);
-    load();
+    load(page, filter);
   };
 
   return (
@@ -83,7 +94,10 @@ export default function LeadsPage() {
         {FILTERS.map((f) => (
           <button
             key={f.value}
-            onClick={() => setFilter(f.value)}
+            onClick={() => {
+              setPage(1);
+              setFilter(f.value);
+            }}
             aria-pressed={filter === f.value}
             className={cn(
               'shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
@@ -150,6 +164,13 @@ export default function LeadsPage() {
               </div>
             </article>
           ))}
+          <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden mt-4">
+            <Pagination
+              page={page}
+              totalPages={Math.ceil(total / PAGE_SIZE)}
+              onChange={setPage}
+            />
+          </div>
         </div>
       )}
     </div>

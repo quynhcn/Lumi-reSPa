@@ -12,6 +12,7 @@ import {
   Phone,
   Plus,
 } from 'lucide-react';
+import { Pagination } from '@/components/ui/pagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,18 +40,42 @@ export default function CustomersPage() {
   const [form, setForm] = useState({ name: '', phone: '', email: '', notes: '' });
   const [saving, setSaving] = useState(false);
 
+  const PAGE_SIZE = 15;
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
   useEffect(() => {
-    loadCustomers();
-  }, []);
+    const timer = setTimeout(() => {
+      if (page !== 1) setPage(1);
+      else loadCustomers(1, search);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  const loadCustomers = async () => {
-    const { data } = await supabase
-      .from('customers')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (!data) { setLoading(false); return; }
+  useEffect(() => {
+    loadCustomers(page, search);
+  }, [page]);
 
-    const customerIds = data.map((c) => c.id);
+  const loadCustomers = async (p: number, q: string) => {
+    setLoading(true);
+    let query: any = supabase.from('customers').select('*', { count: 'exact' });
+    
+    if (q.trim()) {
+      query = query.or(`name.ilike.%${q.trim()}%,phone.ilike.%${q.trim()}%,email.ilike.%${q.trim()}%`);
+    }
+
+    const { data, count } = await query
+      .order('created_at', { ascending: false })
+      .range((p - 1) * PAGE_SIZE, p * PAGE_SIZE - 1);
+      
+    if (count !== null) setTotal(count);
+    if (!data || data.length === 0) {
+      setCustomers([]);
+      setLoading(false);
+      return;
+    }
+
+    const customerIds = data.map((c: any) => c.id);
     const { data: apts } = await supabase
       .from('appointments')
       .select('customer_id, price, status, start_time')
@@ -60,7 +85,6 @@ export default function CustomersPage() {
     (apts || []).forEach((a: { customer_id: string; price: number; status: string; start_time: string }) => {
       if (!statsMap[a.customer_id]) statsMap[a.customer_id] = { count: 0, total: 0, lastVisit: null };
       if (a.status !== 'cancelled') statsMap[a.customer_id].count++;
-      // Spending and last visit only count visits that actually happened
       if (a.status === 'completed') {
         statsMap[a.customer_id].total += a.price;
         if (!statsMap[a.customer_id].lastVisit || a.start_time > statsMap[a.customer_id].lastVisit!) {
@@ -69,7 +93,7 @@ export default function CustomersPage() {
       }
     });
 
-    const enriched: CustomerWithCounts[] = data.map((c: Customer) => ({
+    const enriched: CustomerWithCounts[] = data.map((c: any) => ({
       ...c,
       appointment_count: statsMap[c.id]?.count || 0,
       total_spent: statsMap[c.id]?.total || 0,
@@ -97,23 +121,19 @@ export default function CustomersPage() {
       toast.success('Đã thêm khách hàng');
       setDialogOpen(false);
       setForm({ name: '', phone: '', email: '', notes: '' });
-      loadCustomers();
+      loadCustomers(page, search);
     }
     setSaving(false);
   };
 
-  const filtered = customers.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.phone.includes(search) ||
-    c.email?.toLowerCase().includes(search.toLowerCase())
-  );
+
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="page-title">Khách hàng</h1>
-          <p className="text-sm text-muted-foreground mt-1">{customers.length} khách hàng</p>
+          <p className="text-sm text-muted-foreground mt-1">{total} khách hàng</p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-1" />
@@ -135,7 +155,7 @@ export default function CustomersPage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : customers.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />
           <p>Chưa có khách hàng nào</p>
@@ -155,7 +175,7 @@ export default function CustomersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => (
+                {customers.map((c) => (
                   <tr key={c.id} className="border-b border-border last:border-b-0 hover:bg-muted transition-colors">
                     <td className="px-4 py-3">
                       <Link href={`/admin/customers/${c.id}`} className="flex items-center gap-3">
@@ -192,6 +212,11 @@ export default function CustomersPage() {
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={page}
+            totalPages={Math.ceil(total / PAGE_SIZE)}
+            onChange={setPage}
+          />
         </div>
       )}
 

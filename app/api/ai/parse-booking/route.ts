@@ -51,7 +51,7 @@ async function parseWithGemini(input: string, services: Service[]): Promise<Pars
         signal: controller.signal,
         body: JSON.stringify({
           system_instruction: {
-            parts: [{ text: `Extract spa booking details as JSON. Only use a service UUID from this list:\n${serviceList}\nReturn service_id, service_name, service_confidence, date, date_label, date_confidence, time, time_label, time_confidence, gender_preference, notes, understood_fields, unclear_fields.` }],
+            parts: [{ text: `Extract spa booking details as JSON. Only use a service UUID from this list:\n${serviceList}\nThe store hours are from 08:00 to 19:00 daily. If the user requests a time outside these hours (e.g. midnight, 24:00), do NOT output that time. Instead, leave time as null and add a polite note in 'notes' or 'unclear_fields' stating the operating hours. Return service_id, service_name, service_confidence, date, date_label, date_confidence, time, time_label, time_confidence, gender_preference, notes, understood_fields, unclear_fields.` }],
           },
           contents: [{ parts: [{ text: input }] }],
           generationConfig: { temperature: 0, responseMimeType: 'application/json' },

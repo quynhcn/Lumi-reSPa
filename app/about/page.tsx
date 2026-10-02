@@ -282,7 +282,7 @@ export default function AboutPage() {
               </div>
 
               {/* Bottom Stats Row */}
-              <div className="mt-12 flex flex-wrap items-center gap-6 sm:gap-8 pt-4">
+              <div className="mt-12 flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-6 sm:gap-2 lg:gap-4 pt-4 w-full">
                 {/* Stat 1 */}
                 <div className="flex items-center gap-3">
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#F5ECE1] text-[#8D381B] shadow-inner">
